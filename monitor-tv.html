@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor Antrean Klinik</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .header { background-color: #007bff; color: white; text-align: center; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 32px; letter-spacing: 1px; }
+        .header p { margin: 5px 0 0 0; font-size: 16px; opacity: 0.9; }
+        .container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .card-poli { background: white; border-radius: 12px; padding: 30px 20px; text-align: center; box-shadow: 0 6px 12px rgba(0,0,0,0.05); border-top: 8px solid #007bff; transition: transform 0.2s; }
+        .card-poli.gigi { border-top-color: #28a745; }
+        .card-poli.anak { border-top-color: #ffc107; }
+        .nama-poli { font-size: 24px; font-weight: bold; color: #495057; margin-bottom: 15px; text-transform: uppercase; }
+        .label-antri { font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: -10px; }
+        .nomor-antrean { font-size: 84px; font-weight: bold; color: #007bff; margin: 10px 0; line-height: 1; }
+        .card-poli.gigi .nomor-antrean { color: #28a745; }
+        .card-poli.anak .nomor-antrean { color: #fd7e14; }
+        .label-panggil { font-size: 11px; color: #555; font-weight: bold; margin-bottom: 5px; }
+        .nama-pasien { font-size: 18px; color: #333; font-weight: bold; background: #e9ecef; padding: 8px; border-radius: 6px; min-height: 27px; display: flex; align-items: center; justify-content: center; }
+        .footer-text { text-align: center; margin-top: 40px; color: #adb5bd; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>MONITOR ANTREAN UTAMA</h1>
+        <p id="jamDigital">Memuat waktu...</p>
+    </div>
+
+    <div class="container">
+        <!-- POLI UMUM -->
+        <div class="card-poli umum">
+            <div class="nama-poli">Poli Umum</div>
+            <div class="label-antri">Jumlah Mengantre</div>
+            <div class="nomor-antrean" id="num-umum">0</div>
+            <div class="label-panggil">Panggilan Terakhir:</div>
+            <div class="nama-pasien" id="name-umum">-</div>
+        </div>
+
+        <!-- POLI GIGI -->
+        <div class="card-poli gigi">
+            <div class="nama-poli">Poli Gigi</div>
+            <div class="label-antri">Jumlah Mengantre</div>
+            <div class="nomor-antrean" id="num-gigi">0</div>
+            <div class="label-panggil">Panggilan Terakhir:</div>
+            <div class="nama-pasien" id="name-gigi">-</div>
+        </div>
+
+        <!-- POLI ANAK -->
+        <div class="card-poli anak">
+            <div class="nama-poli">Poli Anak</div>
+            <div class="label-antri">Jumlah Mengantre</div>
+            <div class="nomor-antrean" id="num-anak">0</div>
+            <div class="label-panggil">Panggilan Terakhir:</div>
+            <div class="nama-pasien" id="name-anak">-</div>
+        </div>
+    </div>
+
+    <div class="footer-text">
+        Pembaruan data otomatis via REST API Supabase • Layar Ruang Tunggu
+    </div>
+
+    <script>
+        // PERBAIKAN 1: Mengembalikan URL asli server proyek Supabase Anda
+        const SUPABASE_URL = "https://hhfggbhrxowlvvoglfeo.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_xrtU_thNd4vzqXkO28Cung_flE2xEJb";
+
+        const headers = {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        };
+
+        async function updateMonitor() {
+            try {
+                // PERBAIKAN 2: Menggunakan format tanda titik dua (:) setelah kata order agar tidak memicu eror CORS redirect
+                const url = `${SUPABASE_URL}/rest/v1/antrean?order=id.desc`;
+                const respon = await fetch(url, { method: "GET", headers: headers });
+                
+                if (!respon.ok) throw new Error(`Gagal memuat data monitor (Status: ${respon.status})`);
+                const semuaData = await respon.json();
+
+                // Wadah hitungan awal
+                const hitungAntrean = { "Poli Umum": 0, "Poli Gigi": 0, "Poli Anak": 0 };
+                const panggilanTerakhir = { "Poli Umum": "-", "Poli Gigi": "-", "Poli Anak": "-" };
+
+                if (semuaData && semuaData.length > 0) {
+                    semuaData.forEach(item => {
+                        // 1. Jika statusnya 'menunggu', tambahkan jumlah hitungan mengantre (+1)
+                        if (item.status === "menunggu") {
+                            if (hitungAntrean[item.poli] !== undefined) {
+                                hitungAntrean[item.poli]++;
+                            }
+                        }
+                        
+                        // 2. Jika statusnya 'dipanggil', ambil data paling atas (terbaru) untuk dijadikan panggilan terakhir
+                        if (item.status === "dipanggil") {
+                            if (panggilanTerakhir[item.poli] === "-") {
+                                panggilanTerakhir[item.poli] = `${item.nomor_antrean} - ${item.nama}`;
+                            }
+                        }
+                    });
+                }
+
+                // Masukkan data jumlah mengantre ke komponen angka besar
+                document.getElementById('num-umum').innerText = hitungAntrean["Poli Umum"];
+                document.getElementById('num-gigi').innerText = hitungAntrean["Poli Gigi"];
+                document.getElementById('num-anak').innerText = hitungAntrean["Poli Anak"];
+
+                // Masukkan info nama panggilan terakhir ke kotak abu-abu di bawahnya
+                document.getElementById('name-umum').innerText = panggilanTerakhir["Poli Umum"];
+                document.getElementById('name-gigi').innerText = panggilanTerakhir["Poli Gigi"];
+                document.getElementById('name-anak').innerText = panggilanTerakhir["Poli Anak"];
+
+            } catch (error) {
+                console.error("Monitor Error:", error);
+            }
+        }
+
+        function jalankanJam() {
+            const sekarang = new Date();
+            document.getElementById('jamDigital').innerText = sekarang.toLocaleTimeString('id-ID') + " WIB";
+        }
+
+        setInterval(updateMonitor, 3000); 
+        setInterval(jalankanJam, 1000);   
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateMonitor();
+            jalankanJam();
+        });
+    </script>
+</body>
+</html>
