@@ -29,7 +29,7 @@
     .user-info strong { font-size: 14px; }
     .user-info small { color: var(--muted); display: block; font-size: 11px; margin-top: 2px; }
     .actions { display: flex; gap: 6px; }
-    .btn-sm { padding: 6px 10px; font-size: 11px; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); }
+    .btn-sm { padding: 6px 10px; font-size: 11px; border-radius: 6px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: #fff; cursor: pointer; }
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; border: 1px solid var(--border); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 12px; display: none; }
   </style>
 </head>
@@ -55,14 +55,14 @@
         <button id="btnRefresh" class="btn-sm" style="background: var(--primary);">Refresh</button>
       </div>
       <div id="userList" class="user-list"></div>
-      <button id="btnLogout" style="width: 100%; margin-top: 16px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">Keluar Admin</button>
+      <button id="btnLogout" style="width: 100%; margin-top: 16px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 12px;">Keluar Admin</button>
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
 
   <script>
-    const APPS_SCRIPT_URL = "[URL Web App](https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec)".replace(/\[.*?\]\(\vert{}\)/g, "");
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
     let adminPin = localStorage.getItem('admin_pin') || '';
 
     window.addEventListener('DOMContentLoaded', () => {
