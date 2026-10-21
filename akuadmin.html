@@ -40,7 +40,6 @@
       <p>Kelola data akun dan tiket Google Sheets</p>
     </div>
 
-    <!-- Login PIN Admin -->
     <div id="loginCard" class="card">
       <div class="form-group">
         <input type="password" id="pinInput" maxlength="4" placeholder="Masukkan PIN Admin (9999)">
@@ -48,7 +47,6 @@
       </div>
     </div>
 
-    <!-- Kontrol Admin -->
     <div id="adminCard" class="card" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <span style="font-size: 13px; font-weight: 700;">Daftar Akun Terdaftar</span>
@@ -64,11 +62,14 @@
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
     let adminPin = localStorage.getItem('admin_pin') || '';
+    const channel = new BroadcastChannel('gacha_sync');
 
     window.addEventListener('DOMContentLoaded', () => {
-      if (adminPin) {
-        loadUsers();
+      // Daftarkan service worker di admin juga agar bisa memicu notifikasi
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(console.error);
       }
+      if (adminPin) loadUsers();
     });
 
     document.getElementById('btnLogin').addEventListener('click', () => {
@@ -139,11 +140,33 @@
         });
         const result = await res.json();
         showToast(result.message);
-        if (result.success) loadUsers();
+        
+        if (result.success) {
+          loadUsers();
+
+          // Kirim sinyal broadcast ke tab utama
+          channel.postMessage({ type: 'TICKET_UPDATED', targetUser, newTicket });
+
+          // Picu notifikasi jika tiket diisi 10
+          if (newTicket === 10) {
+            triggerNotification(`Tiket @${targetUser} Diisi Ulang! 🎟️`, '10 Tiket gacha berhasil ditambahkan oleh admin!');
+          }
+        }
       } catch (e) {
         showToast('Gagal update tiket.');
       }
     };
+
+    function triggerNotification(title, body) {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET', title, body });
+      } else if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
+        });
+      }
+    }
 
     function showToast(msg) {
       const t = document.getElementById('toast');
