@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koleksi Galeri - Anime Gacha</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>🖼️ Album Koleksi Galeri 🖼️</h1>
+        <div class="nav-links">
+            <a href="/">Meja Gacha</a>
+            <a href="/galeri">Koleksi Galeri</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="authSection" class="auth-section" style="display: none;">
+            <h2>Belum Masuk</h2>
+            <p>Silakan masuk melalui <a href="/" style="color: var(--secondary-color);">Meja Gacha</a> untuk melihat koleksi Anda.</p>
+        </div>
+
+        <div id="gallerySection" style="display: none;">
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">Semua</button>
+                <button class="filter-btn" data-filter="R">R</button>
+                <button class="filter-btn" data-filter="SR">SR</button>
+                <button class="filter-btn" data-filter="SSR">SSR</button>
+            </div>
+
+            <div id="galleryGrid" class="gallery-grid">
+                <!-- Cards will be injected here -->
+            </div>
+
+            <p id="emptyMessage" style="display:none; color: #888; font-style: italic; margin-top: 50px;">Koleksi masih kosong. Tarik gacha harianmu sekarang!</p>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const authSection = document.getElementById('authSection');
+        const gallerySection = document.getElementById('gallerySection');
+        const galleryGrid = document.getElementById('galleryGrid');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const emptyMessage = document.getElementById('emptyMessage');
+
+        let currentUser = null;
+        let collectionData = [];
+
+        const init = async () => {
+            const savedUser = localStorage.getItem('gachaUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                authSection.style.display = 'none';
+                gallerySection.style.display = 'block';
+                await loadCollection();
+            } else {
+                authSection.style.display = 'block';
+                gallerySection.style.display = 'none';
+            }
+        };
+
+        const loadCollection = async () => {
+            try {
+                // In a real scenario with backend configured, fetch from APPS_SCRIPT_URL:
+                // const res = await fetch(APPS_SCRIPT_URL + "?action=getKoleksi&googleId=" + currentUser.id);
+                // collectionData = await res.json();
+
+                // Fallback to local storage for demonstration
+                collectionData = JSON.parse(localStorage.getItem(`collection_${currentUser.id}`) || '[]');
+                renderGallery('all');
+            } catch (e) {
+                console.error("Gagal memuat koleksi", e);
+            }
+        };
+
+        const renderGallery = (filterRarity) => {
+            galleryGrid.innerHTML = '';
+
+            const filteredCards = filterRarity === 'all'
+                ? collectionData
+                : collectionData.filter(c => c.rarity === filterRarity);
+
+            if (filteredCards.length === 0) {
+                emptyMessage.style.display = 'block';
+            } else {
+                emptyMessage.style.display = 'none';
+                filteredCards.forEach(card => {
+                    const el = document.createElement('div');
+                    el.className = `gallery-item rarity-${card.rarity}`;
+                    el.style.backgroundImage = `url('${card.url}')`;
+
+                    el.innerHTML = `
+                        <div class="card-info" style="font-size: 12px; padding: 10px;">
+                            <div class="rarity-badge" style="font-size: 10px;">${card.rarity}</div>
+                            <div style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Art by ${card.artist_name}</div>
+                            <div style="color:#aaa; font-size:10px;">${card.date}</div>
+                        </div>
+                    `;
+                    galleryGrid.appendChild(el);
+                });
+            }
+        };
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                renderGallery(e.target.getAttribute('data-filter'));
+            });
+        });
+
+        init();
+    </script>
+</body>
+</html>
