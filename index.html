@@ -65,14 +65,12 @@
       <!-- Area Kartu Animasi 3D -->
       <div class="card-stage">
         <div class="card-3d" id="kartuWrapper">
-          <!-- Sisi Belakang Kartu (Cover) -->
           <div class="card-face card-back">
             <div class="card-inner-pattern">
               <span class="card-core-symbol">✦</span>
               <p>TAP UNTUK BUKA</p>
             </div>
           </div>
-          <!-- Sisi Depan Kartu (Hasil Anime) -->
           <div class="card-face card-front" id="kartuDepan">
             <div class="rarity-badge" id="kartuRarity">SSR</div>
             <div class="img-wrapper">
@@ -112,7 +110,7 @@
       </div>
     </section>
 
-    <!-- Tab 3: Pengaturan & PWA -->
+    <!-- Tab 3: Pengaturan, PWA & Admin -->
     <section id="tabAkun" class="tab-pane">
       <div class="profile-card">
         <div class="profile-avatar">👤</div>
@@ -121,20 +119,47 @@
       </div>
 
       <div class="settings-list">
+        <!-- Tombol Reset Manual Cepat (Testing) -->
+        <div class="settings-item highlight">
+          <div>
+            <h4>Reset Tiket Saya Sekarang ⚡</h4>
+            <p>Langsung isi ulang ke 10 tiket & picu notifikasi reset di perangkat.</p>
+          </div>
+          <button id="btnResetManual" class="btn-primary-sm">Reset & Notif</button>
+        </div>
+
         <div class="settings-item">
           <div>
             <h4>Notifikasi Tiket Reset (00:00 WIB)</h4>
-            <p>Dapatkan pemberitahuan otomatis saat jatah 10 tiket terisi ulang.</p>
+            <p>Dapatkan pemberitahuan otomatis saat jatah tiket terisi kembali.</p>
           </div>
           <button id="btnIzinNotif" class="btn-secondary">Aktifkan</button>
         </div>
 
-        <div class="settings-item" id="pwaInstallContainer" style="display: none;">
+        <div class="settings-item" id="pwaInstallContainer">
           <div>
             <h4>Pasang Aplikasi ke HP (PWA)</h4>
-            <p>Pasang icon di homescreen biar bisa dibuka layaknya aplikasi Android asli.</p>
+            <p>Pasang icon di layar utama HP layaknya aplikasi Android asli.</p>
           </div>
           <button id="btnInstallPwa" class="btn-secondary">Install</button>
+        </div>
+
+        <!-- Panel Khusus Admin -->
+        <div class="settings-item admin-box">
+          <div style="width: 100%;">
+            <h4>🛠️ Panel Admin (Maintenance User)</h4>
+            <p>Pantau & sesuaikan tiket user di Google Sheets.</p>
+            
+            <div id="adminLockedArea" style="margin-top: 10px; display: flex; gap: 8px;">
+              <input type="password" id="inputAdminPin" maxlength="4" placeholder="PIN Admin (9999)" style="padding: 8px 12px; background: #090d16; border: 1px solid var(--border-glass); border-radius: 8px; color: #fff; width: 150px;">
+              <button id="btnBukaAdmin" class="btn-secondary">Masuk</button>
+            </div>
+
+            <div id="adminPanelArea" style="display: none; margin-top: 14px;">
+              <button id="btnRefreshAdmin" class="btn-secondary" style="margin-bottom: 10px; width: 100%;">Muat Ulang Daftar User</button>
+              <div id="adminUserList" class="admin-user-list"></div>
+            </div>
+          </div>
         </div>
 
         <button id="btnLogout" class="btn-danger">Keluar dari Akun</button>
@@ -159,7 +184,6 @@
     </button>
   </nav>
 
-  <!-- Notifikasi Melayang (Toast) -->
   <div id="toast" class="toast"></div>
 
   <script src="app.js"></script>
