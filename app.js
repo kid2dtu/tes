@@ -6,6 +6,81 @@ let isFlipping = false;
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
+// Daftar Karakter Anime & Seri untuk Variasi Kartu Otomatis
+const ANIME_CHARACTER_DATABASE = [
+  { char: 'Shirakami Fubuki', anime: 'Hololive' },
+  { char: 'Rem', anime: 'Re:Zero' },
+  { char: 'Emilia', anime: 'Re:Zero' },
+  { char: 'Megumin', anime: 'KonoSuba' },
+  { char: 'Aqua', anime: 'KonoSuba' },
+  { char: 'Kurumi Tokisaki', anime: 'Date A Live' },
+  { char: 'Marin Kitagawa', anime: 'My Dress-Up Darling' },
+  { char: 'Yor Forger', anime: 'Spy × Family' },
+  { char: 'Anya Forger', anime: 'Spy × Family' },
+  { char: 'Raiden Shogun', anime: 'Genshin Impact' },
+  { char: 'Hu Tao', anime: 'Genshin Impact' },
+  { char: 'Furina', anime: 'Genshin Impact' },
+  { char: 'Ganyu', anime: 'Genshin Impact' },
+  { char: 'Firefly', anime: 'Honkai: Star Rail' },
+  { char: 'Kafka', anime: 'Honkai: Star Rail' },
+  { char: 'Sparkle', anime: 'Honkai: Star Rail' },
+  { char: 'March 7th', anime: 'Honkai: Star Rail' },
+  { char: 'Asuna Yuuki', anime: 'Sword Art Online' },
+  { char: 'Sinon', anime: 'Sword Art Online' },
+  { char: 'Zero Two', anime: 'Darling in the Franxx' },
+  { char: 'Makima', anime: 'Chainsaw Man' },
+  { char: 'Power', anime: 'Chainsaw Man' },
+  { char: 'Chisato Nishikigi', anime: 'Lycoris Recoil' },
+  { char: 'Takina Inoue', anime: 'Lycoris Recoil' },
+  { char: 'Hitori Gotoh', anime: 'Bocchi the Rock!' },
+  { char: 'Kita Ikuyo', anime: 'Bocchi the Rock!' },
+  { char: 'Frieren', anime: 'Sousou no Frieren' },
+  { char: 'Fern', anime: 'Sousou no Frieren' },
+  { char: 'Kaguya Shinomiya', anime: 'Kaguya-sama: Love is War' },
+  { char: 'Chika Fujiwara', anime: 'Kaguya-sama: Love is War' },
+  { char: 'Saber', anime: 'Fate/stay night' },
+  { char: 'Rin Tohsaka', anime: 'Fate/stay night' },
+  { char: 'Mash Kyrielight', anime: 'Fate/Grand Order' },
+  { char: 'Roxy Migurdia', anime: 'Mushoku Tensei' },
+  { char: 'Sylphiette', anime: 'Mushoku Tensei' },
+  { char: 'Eris Boreas', anime: 'Mushoku Tensei' },
+  { char: 'Holo', anime: 'Spice and Wolf' },
+  { char: 'Senko-san', anime: 'Sewayaki Kitsune no Senko-san' },
+  { char: 'Raphtalia', anime: 'The Rising of the Shield Hero' },
+  { char: 'Nezuko Kamado', anime: 'Demon Slayer' },
+  { char: 'Shinobu Kocho', anime: 'Demon Slayer' },
+  { char: 'Hatsune Miku', anime: 'Vocaloid' },
+  { char: 'Kanna Kamui', anime: "Miss Kobayashi's Dragon Maid" },
+  { char: 'Tohru', anime: "Miss Kobayashi's Dragon Maid" },
+  { char: 'Shiroko', anime: 'Blue Archive' },
+  { char: 'Hina', anime: 'Blue Archive' }
+];
+
+// Deteksi Nama Karakter Bersih (Bebas dari 'Original Character')
+function resolveCardIdentity(card) {
+  if (card.character_name && card.character_name !== 'Original Character') {
+    return {
+      char: card.character_name,
+      anime: card.anime_name || 'Anime Series'
+    };
+  }
+  if (card.anime_name && card.anime_name !== 'Original Character' && card.anime_name !== 'Anime Special') {
+    return {
+      char: card.anime_name,
+      anime: 'Anime Series'
+    };
+  }
+
+  // Hash URL gambar agar kartu yang sama selalu mendapatkan nama karakter yang konsisten
+  let hash = 0;
+  const str = card.url || '';
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return ANIME_CHARACTER_DATABASE[Math.abs(hash) % ANIME_CHARACTER_DATABASE.length];
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const modalAuth = document.getElementById('modalAuth');
   if (!currentUser) {
@@ -20,9 +95,10 @@ window.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initCountdown();
   initSyncListener();
+  initCardDetailModal();
 });
 
-// 1. Saluran Sinkronisasi Admin Realtime
+// 1. Sinkronisasi Realtime dengan Admin
 function initSyncListener() {
   syncChannel.onmessage = (event) => {
     if (event.data && event.data.type === 'TICKET_UPDATED') {
@@ -80,8 +156,8 @@ function initPWA() {
       if (!('Notification' in window)) return showToast('Browser tidak mendukung notifikasi');
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
-        showToast('Notifikasi tiket harian aktif! 🔔');
-        fireTicketNotification('Notifikasi Aktif! 🔔', 'Kamu akan menerima pemberitahuan saat tiket gacha terisi ulang.');
+        showToast('Notifikasi tiket & gacha aktif! 🔔');
+        fireTicketNotification('Notifikasi Aktif! 🔔', 'Kamu akan menerima pemberitahuan saat tiket reset atau dapat kartu langka!');
       } else {
         showToast('Izin notifikasi ditolak.');
       }
@@ -213,7 +289,7 @@ function renderUI() {
   renderGallery('all');
 }
 
-// 6. Tarik Gacha
+// 6. Tarik Gacha + Notifikasi Khusus SR / SSR
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -252,10 +328,16 @@ if (btnGacha) {
       const data = await res.json();
       const item = data.results[0];
 
+      // Tentukan Nama Karakter Asli
+      const identity = resolveCardIdentity({ url: item.url, anime_name: item.anime_name });
+      const charName = (item.anime_name && item.anime_name !== 'Original Character') ? item.anime_name : identity.char;
+      const animeName = identity.anime;
+
       const newCard = {
         url: item.url,
         artist_name: item.artist_name || 'Artis Komunitas',
-        anime_name: item.anime_name || (rarity === 'SSR' ? 'Anime Special' : 'Original Character'),
+        character_name: charName,
+        anime_name: animeName,
         rarity: rarity,
         date: new Date().toLocaleDateString('id-ID')
       };
@@ -263,7 +345,7 @@ if (btnGacha) {
       cardFront.className = `card-face card-front rarity-${rarity}`;
       document.getElementById('kartuRarity').innerText = rarity;
       document.getElementById('kartuImg').src = newCard.url;
-      document.getElementById('kartuAnime').innerText = newCard.anime_name;
+      document.getElementById('kartuAnime').innerText = newCard.character_name;
       document.getElementById('kartuArtist').innerText = `Artis: ${newCard.artist_name}`;
 
       currentUser.tickets = Math.max(0, currentUser.tickets - 1);
@@ -276,6 +358,13 @@ if (btnGacha) {
         cardWrapper.classList.add('flipped');
         isFlipping = false;
         btnGacha.disabled = false;
+
+        // Picu Notifikasi Khusus Saat Mendapat Kartu SR atau SSR
+        if (rarity === 'SSR') {
+          fireTicketNotification('✨ DAPAT KARTU SSR! ✨', `Luar biasa! Kamu baru saja mendapatkan ${newCard.character_name} (${newCard.anime_name}) dengan kelangkaan SSR!`);
+        } else if (rarity === 'SR') {
+          fireTicketNotification('🌟 DAPAT KARTU SR! 🌟', `Keren! Kamu berhasil mendapatkan ${newCard.character_name} (${newCard.anime_name}) dengan kelangkaan SR!`);
+        }
       };
 
       fetch(APPS_SCRIPT_URL, {
@@ -306,7 +395,7 @@ if (cardWrapper) {
   });
 }
 
-// 7. Album Galeri
+// 7. Album Galeri Koleksi (Klik untuk Pratinjau Penuh)
 function renderGallery(filter = 'all') {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -323,20 +412,77 @@ function renderGallery(filter = 'all') {
   emptyBox.style.display = 'none';
 
   filtered.forEach(c => {
+    const identity = resolveCardIdentity(c);
+    const charName = identity.char;
+
     const el = document.createElement('div');
     el.className = `mini-card rarity-${c.rarity}`;
     el.innerHTML = `
-      <img src="${c.url}" loading="lazy">
+      <img src="${c.url}" loading="lazy" alt="${charName}">
       <div class="mini-card-info">
         <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
-        <h4>${c.anime_name}</h4>
+        <h4>${charName}</h4>
       </div>
     `;
+
+    // Klik kartu untuk membuka pop-up penuh
+    el.addEventListener('click', () => {
+      openCardDetail({
+        url: c.url,
+        rarity: c.rarity,
+        character_name: charName,
+        anime_name: identity.anime,
+        artist_name: c.artist_name || 'Artis Komunitas',
+        date: c.date || 'Hari ini'
+      });
+    });
+
     container.appendChild(el);
   });
 }
 
-// 8. Navigasi Bawah & Logout
+// 8. Logika Modal Pratinjau Penuh Kartu
+function initCardDetailModal() {
+  const modal = document.getElementById('modalCardDetail');
+  const btnClose = document.getElementById('btnCloseDetail');
+  const modalBox = modal.querySelector('.modal-detail-card');
+
+  if (btnClose) {
+    btnClose.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  // Tutup saat area luar diklik
+  modal.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  // Cegah penutupan saat area kartu diklik
+  if (modalBox) {
+    modalBox.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+  }
+}
+
+function openCardDetail(card) {
+  const modal = document.getElementById('modalCardDetail');
+  const modalBox = modal.querySelector('.modal-detail-card');
+
+  modalBox.className = `modal-card modal-detail-card rarity-${card.rarity}`;
+  document.getElementById('detailRarity').innerText = card.rarity;
+  document.getElementById('detailRarity').style.color = `var(--rarity-${card.rarity.toLowerCase()})`;
+  document.getElementById('detailImg').src = card.url;
+  document.getElementById('detailCharacter').innerText = card.character_name;
+  document.getElementById('detailAnime').innerText = `Seri: ${card.anime_name}`;
+  document.getElementById('detailArtist').innerText = card.artist_name;
+  document.getElementById('detailDate').innerText = card.date;
+
+  modal.style.display = 'flex';
+}
+
+// 9. Navigasi Bawah & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
