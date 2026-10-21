@@ -37,7 +37,6 @@ function initSyncListener() {
     }
   };
 
-  // Cek server otomatis tiap kali tab web dibuka kembali dari latar belakang
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && currentUser) {
       syncUserData();
@@ -45,7 +44,7 @@ function initSyncListener() {
   });
 }
 
-// 2. Inisialisasi PWA & Notifikasi
+// 2. Inisialisasi PWA & Izin Notifikasi
 function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
@@ -88,39 +87,6 @@ function initPWA() {
       }
     });
   }
-
-  const btnReset = document.getElementById('btnResetManual');
-  if (btnReset) {
-    btnReset.addEventListener('click', async () => {
-      if (!currentUser) return;
-      btnReset.disabled = true;
-      btnReset.innerText = 'Mereset...';
-
-      try {
-        const res = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'reset_manual',
-            username: currentUser.username,
-            pin: currentUser.pin
-          })
-        });
-        const result = await res.json();
-        if (result.success) {
-          currentUser.tickets = 10;
-          localStorage.setItem('gacha_user', JSON.stringify(currentUser));
-          renderUI();
-          fireTicketNotification('Tiket Harian Siap! 🎟️', '10 Tiket kamu sudah berhasil di-reset manual!');
-          showToast('Tiket berhasil direset jadi 10! 🔔');
-        }
-      } catch (e) {
-        showToast('Gagal mereset tiket server.');
-      } finally {
-        btnReset.disabled = false;
-        btnReset.innerText = 'Reset & Notif';
-      }
-    });
-  }
 }
 
 function fireTicketNotification(title, body) {
@@ -146,7 +112,6 @@ function initCountdown() {
 
     const diff = tomorrow - now;
 
-    // Deteksi pergantian hari jam 00:00 WIB
     if (diff <= 2000 && !hasTriggeredMidnight) {
       hasTriggeredMidnight = true;
       fireTicketNotification('Tiket Harian Siap! 🎟️', 'Sudah jam 00:00 WIB! 10 Tiket barumu sudah masuk, yuk gacha!');
@@ -222,7 +187,6 @@ async function syncUserData() {
     });
     const result = await res.json();
     if (result.success) {
-      // Jika tiket sebelumnya habis/kurang dan di server sudah jadi 10, bunyikan notifikasi!
       if (lastKnownTickets < 10 && result.tickets === 10) {
         fireTicketNotification('Tiket Harian Siap! 🎟️', 'Tiket kamu sudah terisi ulang jadi 10! Ayo gacha lagi!');
       }
