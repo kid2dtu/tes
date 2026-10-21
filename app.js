@@ -3,9 +3,10 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeaj
 let currentUser = JSON.parse(localStorage.getItem('gacha_user') || 'null');
 let deferredPrompt = null;
 let isFlipping = false;
+let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
+const syncChannel = new BroadcastChannel('gacha_sync');
 
 window.addEventListener('DOMContentLoaded', () => {
-  // 1. Cek Sesi Login Lebih Dulu
   const modalAuth = document.getElementById('modalAuth');
   if (!currentUser) {
     if (modalAuth) modalAuth.style.display = 'flex';
@@ -15,13 +16,36 @@ window.addEventListener('DOMContentLoaded', () => {
     syncUserData();
   }
 
-  // 2. Inisialisasi Fitur Aplikasi
   initPWA();
   initTabs();
   initCountdown();
+  initSyncListener();
 });
 
-// Inisialisasi PWA & Notifikasi
+// 1. Saluran Sinkronisasi Admin Realtime
+function initSyncListener() {
+  syncChannel.onmessage = (event) => {
+    if (event.data && event.data.type === 'TICKET_UPDATED') {
+      if (currentUser && currentUser.username === event.data.targetUser) {
+        currentUser.tickets = event.data.newTicket;
+        localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+        renderUI();
+        if (event.data.newTicket === 10) {
+          fireTicketNotification('Tiket Diisi Ulang! 🎟️', 'Admin baru saja menambahkan 10 tiket gacha untukmu!');
+        }
+      }
+    }
+  };
+
+  // Cek server otomatis tiap kali tab web dibuka kembali dari latar belakang
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser) {
+      syncUserData();
+    }
+  });
+}
+
+// 2. Inisialisasi PWA & Notifikasi
 function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
@@ -58,13 +82,13 @@ function initPWA() {
       const permission = await Notification.requestPermission();
       if (permission === 'granted') {
         showToast('Notifikasi tiket harian aktif! 🔔');
+        fireTicketNotification('Notifikasi Aktif! 🔔', 'Kamu akan menerima pemberitahuan saat tiket gacha terisi ulang.');
       } else {
         showToast('Izin notifikasi ditolak.');
       }
     });
   }
 
-  // Reset Manual & Uji Notifikasi
   const btnReset = document.getElementById('btnResetManual');
   if (btnReset) {
     btnReset.addEventListener('click', async () => {
@@ -85,16 +109,8 @@ function initPWA() {
         if (result.success) {
           currentUser.tickets = 10;
           localStorage.setItem('gacha_user', JSON.stringify(currentUser));
-          document.getElementById('txtTiket').innerText = 10;
-
-          if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET' });
-          } else if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Tiket Harian Siap! 🎟️', {
-              body: '10 Tiket kamu sudah berhasil di-reset manual!',
-              icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
-            });
-          }
+          renderUI();
+          fireTicketNotification('Tiket Harian Siap! 🎟️', '10 Tiket kamu sudah berhasil di-reset manual!');
           showToast('Tiket berhasil direset jadi 10! 🔔');
         }
       } catch (e) {
@@ -107,8 +123,21 @@ function initPWA() {
   }
 }
 
-// Hitung Mundur Reset 00:00 WIB
+function fireTicketNotification(title, body) {
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET', title, body });
+  } else if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, {
+      body: body,
+      icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
+    });
+  }
+}
+
+// 3. Hitung Mundur Reset 00:00 WIB
 function initCountdown() {
+  let hasTriggeredMidnight = false;
+
   function updateTimer() {
     const now = new Date();
     const tomorrow = new Date(now);
@@ -116,11 +145,13 @@ function initCountdown() {
     tomorrow.setHours(0, 0, 0, 0);
 
     const diff = tomorrow - now;
-    if (diff <= 1000) {
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET' });
-      }
+
+    // Deteksi pergantian hari jam 00:00 WIB
+    if (diff <= 2000 && !hasTriggeredMidnight) {
+      hasTriggeredMidnight = true;
+      fireTicketNotification('Tiket Harian Siap! 🎟️', 'Sudah jam 00:00 WIB! 10 Tiket barumu sudah masuk, yuk gacha!');
       if (currentUser) syncUserData();
+      setTimeout(() => { hasTriggeredMidnight = false; }, 5000);
     }
 
     const jam = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
@@ -133,7 +164,7 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// Logika Masuk & Daftar Akun
+// 4. Autentikasi Akun
 const btnAuth = document.getElementById('btnAuthSubmit');
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
@@ -164,6 +195,7 @@ if (btnAuth) {
           tickets: result.tickets,
           koleksi: result.koleksi || []
         };
+        lastKnownTickets = result.tickets;
         localStorage.setItem('gacha_user', JSON.stringify(currentUser));
         document.getElementById('modalAuth').style.display = 'none';
         renderUI();
@@ -180,7 +212,7 @@ if (btnAuth) {
   });
 }
 
-// Sinkronisasi Sisa Tiket & Koleksi dari Server
+// 5. Sinkronisasi Data & Sensor Reset Tiket
 async function syncUserData() {
   if (!currentUser) return;
   try {
@@ -190,6 +222,11 @@ async function syncUserData() {
     });
     const result = await res.json();
     if (result.success) {
+      // Jika tiket sebelumnya habis/kurang dan di server sudah jadi 10, bunyikan notifikasi!
+      if (lastKnownTickets < 10 && result.tickets === 10) {
+        fireTicketNotification('Tiket Harian Siap! 🎟️', 'Tiket kamu sudah terisi ulang jadi 10! Ayo gacha lagi!');
+      }
+      lastKnownTickets = result.tickets;
       currentUser.tickets = result.tickets;
       currentUser.koleksi = result.koleksi || [];
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
@@ -212,7 +249,7 @@ function renderUI() {
   renderGallery('all');
 }
 
-// Tarik Gacha
+// 6. Tarik Gacha
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -266,6 +303,7 @@ if (btnGacha) {
       document.getElementById('kartuArtist').innerText = `Artis: ${newCard.artist_name}`;
 
       currentUser.tickets = Math.max(0, currentUser.tickets - 1);
+      lastKnownTickets = currentUser.tickets;
       currentUser.koleksi.unshift(newCard);
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       document.getElementById('txtTiket').innerText = currentUser.tickets;
@@ -304,7 +342,7 @@ if (cardWrapper) {
   });
 }
 
-// Album Galeri
+// 7. Album Galeri
 function renderGallery(filter = 'all') {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -334,7 +372,7 @@ function renderGallery(filter = 'all') {
   });
 }
 
-// Navigasi Bawah & Logout
+// 8. Navigasi Bawah & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
