@@ -1,237 +1,167 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Gacha Harian</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <title>Anime Gacha Harian</title>
+  
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>🌟 Anime Gacha Harian 🌟</h1>
-        <div class="nav-links">
-            <a href="/">Meja Gacha</a>
-            <a href="/galeri">Koleksi Galeri</a>
-        </div>
-    </header>
 
-    <div class="container">
-        <!-- Auth Section -->
-        <div id="authSection" class="auth-section">
-            <h2>Masuk untuk Gacha</h2>
-            <p>Silakan masukkan nama Anda untuk memulai.</p>
-            <input type="text" id="usernameInput" placeholder="Nama Akun" style="padding:10px; width:80%; margin-bottom:15px; border-radius:5px; border:none;">
-            <br>
-            <button id="btnLogin">Masuk</button>
-        </div>
-
-        <!-- Gacha Section -->
-        <div id="gachaSection" class="gacha-section" style="display: none;">
-            <h2 id="welcomeText">Selamat Datang!</h2>
-            <div class="ticket-info">
-                <h3>Sisa Tiket Harian: <span id="ticketCount">Memuat...</span> 🎟️</h3>
-            </div>
-
-            <button id="btnGacha" disabled>Tarik Gacha Harian!</button>
-
-            <!-- Card UI -->
-            <div id="cardContainer" class="card-container">
-                <div id="gachaCard" class="card">
-                    <div class="card-face card-front"></div>
-                    <div id="cardBack" class="card-face card-back">
-                        <div class="card-info">
-                            <div id="cardRarity" class="rarity-badge">SSR</div>
-                            <h3 id="cardTitle" style="margin: 0; font-size: 16px;">Anime Name</h3>
-                            <p id="cardArtist" style="margin: 5px 0 0 0; font-size: 12px; color: #ccc;">Artist</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <!-- Modal Login & PIN -->
+  <div id="modalAuth" class="modal-overlay">
+    <div class="modal-card">
+      <div class="auth-icon">✨</div>
+      <h2>Masuk ke Akun</h2>
+      <p class="auth-desc">Ketik username dan 4 digit PIN kamu. Akun baru akan otomatis terdaftar.</p>
+      
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="authUsername" placeholder="contoh: elin" autocomplete="off" autocapitalize="none">
+      </div>
+      
+      <div class="form-group">
+        <label>PIN (4 Digit Angka)</label>
+        <input type="password" id="authPin" maxlength="4" placeholder="••••" inputmode="numeric">
+      </div>
+      
+      <button id="btnAuthSubmit" class="btn-primary">Masuk / Daftar</button>
+      <div id="authError" class="auth-error"></div>
     </div>
+  </div>
 
-    <div id="toast" class="toast">Notifikasi</div>
+  <!-- Header Atas -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo-sparkle">✦</span>
+      <h1>AnimeGacha</h1>
+    </div>
+    <div class="user-pill" id="btnBukaAkun">
+      <span id="headerUsername">Memuat...</span>
+    </div>
+  </header>
 
-    <script src="config.js"></script>
-    <script>
-        // State
-        let currentUser = null;
-        let tickets = 0;
+  <!-- Konten Utama (SPA) -->
+  <main class="app-container">
+    
+    <!-- Tab 1: Meja Gacha -->
+    <section id="tabGacha" class="tab-pane active">
+      <div class="ticket-status-card">
+        <div class="ticket-info">
+          <span class="label">Sisa Tiket Harian</span>
+          <div class="ticket-count"><span id="txtTiket">0</span> <small>/ 10 🎟️</small></div>
+        </div>
+        <div class="reset-countdown">
+          <span class="label">Reset Tiket</span>
+          <span id="txtCountdown" class="timer">--:--:--</span>
+        </div>
+      </div>
 
-        // UI Elements
-        const authSection = document.getElementById('authSection');
-        const gachaSection = document.getElementById('gachaSection');
-        const usernameInput = document.getElementById('usernameInput');
-        const btnLogin = document.getElementById('btnLogin');
-        const welcomeText = document.getElementById('welcomeText');
-        const ticketCount = document.getElementById('ticketCount');
-        const btnGacha = document.getElementById('btnGacha');
-        const cardContainer = document.getElementById('cardContainer');
-        const gachaCard = document.getElementById('gachaCard');
-        const cardBack = document.getElementById('cardBack');
-        const cardRarity = document.getElementById('cardRarity');
-        const cardTitle = document.getElementById('cardTitle');
-        const cardArtist = document.getElementById('cardArtist');
-        const toast = document.getElementById('toast');
+      <!-- Area Kartu Animasi 3D -->
+      <div class="card-stage">
+        <div class="card-3d" id="kartuWrapper">
+          <!-- Sisi Belakang Kartu (Cover) -->
+          <div class="card-face card-back">
+            <div class="card-inner-pattern">
+              <span class="card-core-symbol">✦</span>
+              <p>TAP UNTUK BUKA</p>
+            </div>
+          </div>
+          <!-- Sisi Depan Kartu (Hasil Anime) -->
+          <div class="card-face card-front" id="kartuDepan">
+            <div class="rarity-badge" id="kartuRarity">SSR</div>
+            <div class="img-wrapper">
+              <img id="kartuImg" src="" alt="Anime Card">
+            </div>
+            <div class="card-caption">
+              <h3 id="kartuAnime">Judul Anime</h3>
+              <p id="kartuArtist">Artist: -</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        // Helpers
-        const showToast = (msg) => {
-            toast.innerText = msg;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        };
+      <!-- Tombol Tarik -->
+      <div class="action-box">
+        <button id="btnTarikGacha" class="btn-gacha">
+          <span class="btn-txt">Tarik Gacha (1 Tiket)</span>
+          <span class="btn-sparkle">✨</span>
+        </button>
+      </div>
+    </section>
 
-        const updateUI = () => {
-            if (currentUser) {
-                authSection.style.display = 'none';
-                gachaSection.style.display = 'block';
-                welcomeText.innerText = `Halo, ${currentUser.nama}!`;
-            } else {
-                authSection.style.display = 'block';
-                gachaSection.style.display = 'none';
-            }
-        };
+    <!-- Tab 2: Album Galeri -->
+    <section id="tabGaleri" class="tab-pane">
+      <div class="gallery-header">
+        <h2>Album Koleksi</h2>
+        <div class="rarity-filters">
+          <button class="filter-chip active" data-filter="all">Semua</button>
+          <button class="filter-chip" data-filter="SSR">SSR</button>
+          <button class="filter-chip" data-filter="SR">SR</button>
+          <button class="filter-chip" data-filter="R">R</button>
+        </div>
+      </div>
+      <div id="gridGaleri" class="gallery-grid"></div>
+      <div id="galeriKosong" class="empty-state">
+        <p>Belum ada kartu di koleksi kamu. Ayo tarik gacha pertamamu!</p>
+      </div>
+    </section>
 
-        // Simulated Login (Since Google Auth requires domain setup, we use simple localStorage for now)
-        const initLogin = async () => {
-            const savedUser = localStorage.getItem('gachaUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                updateUI();
-                await fetchUserData();
-            }
-        };
+    <!-- Tab 3: Pengaturan & PWA -->
+    <section id="tabAkun" class="tab-pane">
+      <div class="profile-card">
+        <div class="profile-avatar">👤</div>
+        <h2 id="profileUsername">Username</h2>
+        <span class="profile-badge">Akun Tersimpan di Google Sheets</span>
+      </div>
 
-        btnLogin.addEventListener('click', async () => {
-            const name = usernameInput.value.trim();
-            if (!name) {
-                showToast("Nama tidak boleh kosong!");
-                return;
-            }
+      <div class="settings-list">
+        <div class="settings-item">
+          <div>
+            <h4>Notifikasi Tiket Reset (00:00 WIB)</h4>
+            <p>Dapatkan pemberitahuan otomatis saat jatah 10 tiket terisi ulang.</p>
+          </div>
+          <button id="btnIzinNotif" class="btn-secondary">Aktifkan</button>
+        </div>
 
-            btnLogin.disabled = true;
-            btnLogin.innerText = "Memproses...";
+        <div class="settings-item" id="pwaInstallContainer" style="display: none;">
+          <div>
+            <h4>Pasang Aplikasi ke HP (PWA)</h4>
+            <p>Pasang icon di homescreen biar bisa dibuka layaknya aplikasi Android asli.</p>
+          </div>
+          <button id="btnInstallPwa" class="btn-secondary">Install</button>
+        </div>
 
-            // Create a mock user
-            currentUser = { id: 'usr_' + Date.now(), nama: name };
-            localStorage.setItem('gachaUser', JSON.stringify(currentUser));
+        <button id="btnLogout" class="btn-danger">Keluar dari Akun</button>
+      </div>
+    </section>
 
-            await fetchUserData();
+  </main>
 
-            updateUI();
-            btnLogin.disabled = false;
-            btnLogin.innerText = "Masuk";
-        });
+  <!-- Bottom Navigation Mobile -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-target="tabGacha">
+      <span class="nav-icon">🎰</span>
+      <span class="nav-label">Gacha</span>
+    </button>
+    <button class="nav-item" data-target="tabGaleri">
+      <span class="nav-icon">🎴</span>
+      <span class="nav-label">Koleksi</span>
+    </button>
+    <button class="nav-item" data-target="tabAkun">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Akun</span>
+    </button>
+  </nav>
 
-        // Fetch Data from Apps Script
-        const fetchUserData = async () => {
-            try {
-                // Because Apps Script uses CORS, we'll use no-cors or simulate the response if the script isn't live yet.
-                // In a real app, you'd deploy the Apps Script to return JSON.
-                const response = await fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: "login", googleId: currentUser.id, nama: currentUser.nama })
-                });
+  <!-- Notifikasi Melayang (Toast) -->
+  <div id="toast" class="toast"></div>
 
-                // For demonstration, if fetch fails due to CORS or script not ready, simulate tickets
-                if (!response.ok) throw new Error("CORS/Network");
-                const data = await response.json();
-                tickets = data.tickets || 0;
-            } catch (e) {
-                console.log("Using fallback ticket system");
-                // Fallback if Apps Script is not properly deployed
-                const savedData = JSON.parse(localStorage.getItem(`data_${currentUser.id}`) || '{"tickets": 3, "lastReset": null}');
-                const today = new Date().toDateString();
-                if (savedData.lastReset !== today) {
-                    savedData.tickets = 3;
-                    savedData.lastReset = today;
-                    localStorage.setItem(`data_${currentUser.id}`, JSON.stringify(savedData));
-                }
-                tickets = savedData.tickets;
-            }
-
-            ticketCount.innerText = tickets;
-            btnGacha.disabled = tickets <= 0;
-        };
-
-        // Gacha Logic
-        const determineRarity = () => {
-            const rand = Math.random();
-            if (rand < 0.05) return 'SSR';
-            if (rand < 0.30) return 'SR';
-            return 'R';
-        };
-
-        btnGacha.addEventListener('click', async () => {
-            if (tickets <= 0) return;
-
-            btnGacha.disabled = true;
-            btnGacha.innerText = "Menarik Gacha...";
-
-            // Reset card state
-            gachaCard.classList.remove('flipped');
-            cardBack.className = 'card-face card-back';
-            cardContainer.style.display = 'block';
-
-            try {
-                // Fetch random image from Nekos.best API
-                const res = await fetch('https://nekos.best/api/v2/neko');
-                const data = await res.json();
-                const neko = data.results[0];
-
-                const rarity = determineRarity();
-                const newCard = {
-                    url: neko.url,
-                    artist_name: neko.artist_name || 'Unknown',
-                    anime_name: 'Nekos.best Collection',
-                    rarity: rarity,
-                    date: new Date().toLocaleDateString()
-                };
-
-                // Prepare UI
-                cardBack.style.backgroundImage = `url('${newCard.url}')`;
-                cardRarity.innerText = newCard.rarity;
-                cardTitle.innerText = newCard.anime_name;
-                cardArtist.innerText = `Art by ${newCard.artist_name}`;
-
-                cardBack.classList.add(`rarity-${rarity}`);
-
-                // Simulate saving to Apps Script
-                fetch(APPS_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ action: "gacha", googleId: currentUser.id, kartu: newCard })
-                }).catch(e => console.log('Apps script save failed, using fallback'));
-
-                // Fallback Local Storage Save
-                const savedData = JSON.parse(localStorage.getItem(`data_${currentUser.id}`));
-                savedData.tickets -= 1;
-                tickets = savedData.tickets;
-                localStorage.setItem(`data_${currentUser.id}`, JSON.stringify(savedData));
-
-                const collection = JSON.parse(localStorage.getItem(`collection_${currentUser.id}`) || '[]');
-                collection.push(newCard);
-                localStorage.setItem(`collection_${currentUser.id}`, JSON.stringify(collection));
-
-                ticketCount.innerText = tickets;
-
-                // Animate Flip
-                setTimeout(() => {
-                    gachaCard.classList.add('flipped');
-                    showToast(`Mendapatkan kartu ${rarity}!`);
-                }, 500);
-
-            } catch (err) {
-                console.error(err);
-                showToast("Gagal menarik gacha. Coba lagi.");
-            } finally {
-                btnGacha.innerText = "Tarik Gacha Harian!";
-                btnGacha.disabled = tickets <= 0;
-            }
-        });
-
-        // Init
-        initLogin();
-    </script>
+  <script src="app.js"></script>
 </body>
 </html>
