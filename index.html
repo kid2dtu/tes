@@ -35,6 +35,25 @@
     </div>
   </div>
 
+  <!-- Modal Detail Kartu Koleksi (Pop-up Gambar Penuh) -->
+  <div id="modalCardDetail" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-detail-card">
+      <button id="btnCloseDetail" class="btn-close-modal">✕</button>
+      <div class="detail-badge" id="detailRarity">SSR</div>
+      <div class="detail-img-box">
+        <img id="detailImg" src="" alt="Detail Kartu">
+      </div>
+      <div class="detail-info">
+        <h3 id="detailCharacter">Nama Karakter</h3>
+        <p class="detail-anime" id="detailAnime">Anime: Judul Seri</p>
+        <div class="detail-meta">
+          <span>🎨 <span id="detailArtist">Artis</span></span>
+          <span>📅 <span id="detailDate">Tanggal</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Header Atas -->
   <header class="app-header">
     <div class="brand">
@@ -77,7 +96,7 @@
               <img id="kartuImg" src="" alt="Anime Card">
             </div>
             <div class="card-caption">
-              <h3 id="kartuAnime">Judul Anime</h3>
+              <h3 id="kartuAnime">Nama Karakter</h3>
               <p id="kartuArtist">Artist: -</p>
             </div>
           </div>
