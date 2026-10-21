@@ -110,7 +110,7 @@
       </div>
     </section>
 
-    <!-- Tab 3: Pengaturan, PWA & Admin -->
+    <!-- Tab 3: Pengaturan & PWA User -->
     <section id="tabAkun" class="tab-pane">
       <div class="profile-card">
         <div class="profile-avatar">👤</div>
@@ -119,7 +119,6 @@
       </div>
 
       <div class="settings-list">
-        <!-- Tombol Reset Manual Cepat (Testing) -->
         <div class="settings-item highlight">
           <div>
             <h4>Reset Tiket Saya Sekarang ⚡</h4>
@@ -144,23 +143,11 @@
           <button id="btnInstallPwa" class="btn-secondary">Install</button>
         </div>
 
-        <!-- Panel Khusus Admin -->
-        <div class="settings-item admin-box">
-          <div style="width: 100%;">
-            <h4>🛠️ Panel Admin (Maintenance User)</h4>
-            <p>Pantau & sesuaikan tiket user di Google Sheets.</p>
-            
-            <div id="adminLockedArea" style="margin-top: 10px; display: flex; gap: 8px;">
-              <input type="password" id="inputAdminPin" maxlength="4" placeholder="PIN Admin (9999)" style="padding: 8px 12px; background: #090d16; border: 1px solid var(--border-glass); border-radius: 8px; color: #fff; width: 150px;">
-              <button id="btnBukaAdmin" class="btn-secondary">Masuk</button>
-            </div>
+        <button id="btnLogout" class="btn-danger">Keluar dari Akun</button>
+      </div>
+    </section>
 
-            <div id="adminPanelArea" style="display: none; margin-top: 14px;">
-              <button id="btnRefreshAdmin" class="btn-secondary" style="margin-bottom: 10px; width: 100%;">Muat Ulang Daftar User</button>
-              <div id="adminUserList" class="admin-user-list"></div>
-            </div>
-          </div>
-        </div>
+  </main>
 
   <!-- Bottom Navigation Mobile -->
   <nav class="bottom-nav">
