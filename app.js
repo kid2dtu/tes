@@ -1,15 +1,15 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
 
-// Sesi Pengguna
 let currentUser = JSON.parse(localStorage.getItem('gacha_user') || 'null');
 let deferredPrompt = null;
 let isFlipping = false;
+let currentAdminPin = "";
 
-// 1. Inisialisasi Aplikasi & PWA
 window.addEventListener('DOMContentLoaded', () => {
   initPWA();
   initTabs();
   initCountdown();
+  initAdmin();
 
   if (!currentUser) {
     document.getElementById('modalAuth').style.display = 'flex';
@@ -19,7 +19,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// 2. Service Worker & PWA Install Banner
+// 1. Inisialisasi PWA & Notifikasi
 function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
@@ -39,6 +39,8 @@ function initPWA() {
         document.getElementById('pwaInstallContainer').style.display = 'none';
       }
       deferredPrompt = null;
+    } else {
+      showToast('Buka menu Chrome (titik 3) -> pilih Tambahkan ke Layar Utama');
     }
   });
 
@@ -46,25 +48,64 @@ function initPWA() {
     if (!('Notification' in window)) return showToast('Browser tidak mendukung notifikasi');
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      showToast('Notifikasi reset jam 00:00 WIB aktif! 🔔');
+      showToast('Notifikasi tiket harian aktif! 🔔');
     } else {
       showToast('Izin notifikasi ditolak.');
     }
   });
+
+  // Tombol Reset Manual Cepat + Pemicu Notifikasi Instan
+  document.getElementById('btnResetManual').addEventListener('click', async () => {
+    if (!currentUser) return;
+    const btn = document.getElementById('btnResetManual');
+    btn.disabled = true;
+    btn.innerText = 'Mereset...';
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'reset_manual',
+          username: currentUser.username,
+          pin: currentUser.pin
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        currentUser.tickets = 10;
+        localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+        document.getElementById('txtTiket').innerText = 10;
+        
+        // Picu Notifikasi di HP / Layar
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET' });
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Tiket Harian Siap! 🎟️', {
+            body: '10 Tiket kamu sudah berhasil di-reset manual!',
+            icon: 'https://nekos.best/logo.png'
+          });
+        }
+        showToast('Tiket berhasil direset jadi 10! Notifikasi dikirim 🔔');
+      }
+    } catch (e) {
+      showToast('Gagal mereset tiket server.');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Reset & Notif';
+    }
+  });
 }
 
-// 3. Hitung Mundur Menuju Reset 00:00 WIB
+// 2. Hitung Mundur Menuju Reset 00:00 WIB
 function initCountdown() {
   function updateTimer() {
     const now = new Date();
-    // Hitung waktu tengah malam berikutnya (Asia/Jakarta)
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
 
     const diff = tomorrow - now;
     if (diff <= 1000) {
-      // Pemicu tepat jam 00:00 WIB
       if (navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET' });
       }
@@ -80,7 +121,7 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// 4. Autentikasi Username + PIN
+// 3. Autentikasi Akun
 document.getElementById('btnAuthSubmit').addEventListener('click', async () => {
   const username = document.getElementById('authUsername').value.trim().toLowerCase();
   const pin = document.getElementById('authPin').value.trim();
@@ -125,7 +166,7 @@ document.getElementById('btnAuthSubmit').addEventListener('click', async () => {
   }
 });
 
-// Sinkronisasi data akun terbaru dari server
+// Sinkronisasi Data dari Server
 async function syncUserData() {
   renderUI();
   try {
@@ -141,7 +182,7 @@ async function syncUserData() {
       renderUI();
     }
   } catch (e) {
-    console.warn('Menggunakan cache lokal:', e);
+    console.warn('Gagal sinkron:', e);
   }
 }
 
@@ -153,7 +194,7 @@ function renderUI() {
   renderGallery('all');
 }
 
-// 5. Logika Gacha & Nekos.best API
+// 4. Logika Gacha & Animasi Kartu
 document.getElementById('btnTarikGacha').addEventListener('click', async () => {
   if (isFlipping) return;
   if (!currentUser || currentUser.tickets <= 0) {
@@ -167,20 +208,17 @@ document.getElementById('btnTarikGacha').addEventListener('click', async () => {
   isFlipping = true;
   btn.disabled = true;
 
-  // Tutup kembali kartu jika sedang terbuka
   cardWrapper.classList.remove('flipped');
   await new Promise(r => setTimeout(r, 350));
-
   showToast('Memanggil kartu anime...');
 
-  // Tentukan Kelangkaan: R 70%, SR 25%, SSR 5%
   const roll = Math.random() * 100;
   let rarity = 'R';
   let endpoint = 'neko';
 
   if (roll <= 5) {
     rarity = 'SSR';
-    endpoint = 'smug'; // Format GIF animasi dari Nekos.best
+    endpoint = 'smug';
   } else if (roll <= 30) {
     rarity = 'SR';
     endpoint = 'kitsune';
@@ -202,27 +240,23 @@ document.getElementById('btnTarikGacha').addEventListener('click', async () => {
       date: new Date().toLocaleDateString('id-ID')
     };
 
-    // Render data ke kartu depan
     cardFront.className = `card-face card-front rarity-${rarity}`;
     document.getElementById('kartuRarity').innerText = rarity;
     document.getElementById('kartuImg').src = newCard.url;
     document.getElementById('kartuAnime').innerText = newCard.anime_name;
     document.getElementById('kartuArtist').innerText = `Artis: ${newCard.artist_name}`;
 
-    // Kurangi tiket lokal instan
     currentUser.tickets = Math.max(0, currentUser.tickets - 1);
     currentUser.koleksi.unshift(newCard);
     localStorage.setItem('gacha_user', JSON.stringify(currentUser));
     document.getElementById('txtTiket').innerText = currentUser.tickets;
 
-    // Tunggu gambar siap lalu putar kartu
     document.getElementById('kartuImg').onload = () => {
       cardWrapper.classList.add('flipped');
       isFlipping = false;
       btn.disabled = false;
     };
 
-    // Sinkronisasi database di latar belakang
     fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       body: JSON.stringify({
@@ -234,20 +268,19 @@ document.getElementById('btnTarikGacha').addEventListener('click', async () => {
     }).catch(console.error);
 
   } catch (err) {
-    showToast('Koneksi ke Nekos.best lambat. Coba tekan lagi.');
+    showToast('Koneksi lambat. Coba lagi.');
     isFlipping = false;
     btn.disabled = false;
   }
 });
 
-// Flip kartu jika diklik manual
 document.getElementById('kartuWrapper').addEventListener('click', () => {
   if (document.getElementById('kartuImg').src) {
     document.getElementById('kartuWrapper').classList.toggle('flipped');
   }
 });
 
-// 6. Galeri Kartu
+// 5. Galeri
 function renderGallery(filter = 'all') {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -276,7 +309,86 @@ function renderGallery(filter = 'all') {
   });
 }
 
-// 7. Navigasi Bawah (SPA Switcher)
+// 6. Logika Panel Admin
+function initAdmin() {
+  document.getElementById('btnBukaAdmin').addEventListener('click', async () => {
+    const pin = document.getElementById('inputAdminPin').value.trim();
+    if (!pin) return showToast('Masukkan PIN Admin');
+
+    currentAdminPin = pin;
+    await loadAdminUsers();
+  });
+
+  document.getElementById('btnRefreshAdmin').addEventListener('click', loadAdminUsers);
+}
+
+async function loadAdminUsers() {
+  const listContainer = document.getElementById('adminUserList');
+  listContainer.innerHTML = '<p style="font-size:12px; color:#94a3b8;">Memuat user...</p>';
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'admin_get_users', adminPin: currentAdminPin })
+    });
+    const result = await res.json();
+
+    if (!result.success) {
+      showToast(result.message);
+      return;
+    }
+
+    document.getElementById('adminLockedArea').style.display = 'none';
+    document.getElementById('adminPanelArea').style.display = 'block';
+    listContainer.innerHTML = '';
+
+    result.users.forEach(u => {
+      const row = document.createElement('div');
+      row.className = 'admin-user-row';
+      row.innerHTML = `
+        <div>
+          <strong>@${u.username}</strong> (PIN: ${u.pin})<br>
+          <small style="color:#94a3b8;">Tiket: ${u.tickets} | Tgl: ${u.lastDate}</small>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-sm" onclick="ubahTiketAdmin('${u.username}', 10)">+10</button>
+          <button class="btn-sm" onclick="ubahTiketAdmin('${u.username}', 0)">0</button>
+        </div>
+      `;
+      listContainer.appendChild(row);
+    });
+  } catch (e) {
+    showToast('Gagal memuat data admin');
+  }
+}
+
+window.ubahTiketAdmin = async function(targetUser, newTicket) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'admin_set_ticket',
+        adminPin: currentAdminPin,
+        targetUser,
+        newTicket
+      })
+    });
+    const result = await res.json();
+    showToast(result.message);
+    if (result.success) {
+      loadAdminUsers();
+      if (currentUser && currentUser.username === targetUser) {
+        currentUser.tickets = newTicket;
+        localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+        renderUI();
+      }
+    }
+  } catch (e) {
+    showToast('Gagal mengubah tiket');
+  }
+};
+
+// 7. Navigasi & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
@@ -301,7 +413,6 @@ function initTabs() {
     document.getElementById('tabAkun').classList.add('active');
   });
 
-  // Filter chips galeri
   document.querySelectorAll('.filter-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
@@ -310,7 +421,6 @@ function initTabs() {
     });
   });
 
-  // Logout
   document.getElementById('btnLogout').addEventListener('click', () => {
     localStorage.removeItem('gacha_user');
     currentUser = null;
