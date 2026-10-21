@@ -37,17 +37,20 @@
         <small>Silahkan tunggu di ruang tunggu</small>
     </div>
 
+    <button id="btnCetak" onclick="window.print()">Cetak Tiket</button>
+    <div id="toast"></div>
+
     <script>
         // PERBAIKAN: Menggunakan URL asli proyek Supabase Anda kembali
-        const SUPABASE_URL = "https://hhfggbhrxowlvvoglfeo.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_xrtU_thNd4vzqXkO28Cung_flE2xEJb";
 
         document.getElementById('btnAmbil').addEventListener('click', async () => {
+            const btnAmbil = document.getElementById('btnAmbil');
+            const originalText = btnAmbil.innerText;
             const namaInput = document.getElementById('nama').value.trim();
             const poliTerpilih = document.getElementById('poli').value;
 
             if (!namaInput) {
-                alert("Nama tidak boleh kosong!");
+                showToast("Nama tidak boleh kosong!");
                 return;
             }
 
@@ -62,6 +65,8 @@
 
                 // 1. Mengambil nomor urut terakhir berdasarkan poli pilihan
                 const urlFetch = `${SUPABASE_URL}/rest/v1/antrean?poli=eq.${encodeURIComponent(poliTerpilih)}&order=id.desc&limit=1`;
+            btnAmbil.disabled = true;
+            btnAmbil.innerText = "Memproses...";
                 const responseFetch = await fetch(urlFetch, { method: "GET", headers: headers });
 
                 if (!responseFetch.ok) {
@@ -105,7 +110,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert(`Terjadi Kendala: ${error.message}\n\nJika tetap bermasalah, pastikan tabel 'antrean' Anda masih dalam status 'RLS disabled'.`);
+                showToast(`Terjadi Kendala: ${error.message}\n\nJika tetap bermasalah, pastikan tabel 'antrean' Anda masih dalam status 'RLS disabled'.`);
             }
         });
     </script>
