@@ -106,11 +106,15 @@
                 document.getElementById('tiket').style.display = 'block';
                 
                 document.getElementById('nama').value = "";
-                alert("Antrean berhasil diambil!");
+                showToast("Antrean berhasil diambil!");
+                document.getElementById('btnCetak').style.display = 'inline-block';
 
             } catch (error) {
                 console.error(error);
                 showToast(`Terjadi Kendala: ${error.message}\n\nJika tetap bermasalah, pastikan tabel 'antrean' Anda masih dalam status 'RLS disabled'.`);
+            } finally {
+                btnAmbil.disabled = false;
+                btnAmbil.innerText = originalText;
             }
         });
     </script>
