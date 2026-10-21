@@ -1,14 +1,6 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/ambil-antrean",
-      "permanent": false
-    }
-  ],
   "rewrites": [
-    { "source": "/ambil-antrean", "destination": "/ambil-antrean.html" },
-    { "source": "/monitor-tv", "destination": "/monitor-tv.html" },
-    { "source": "/petugas", "destination": "/petugas.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/galeri", "destination": "/galeri.html" }
   ]
 }

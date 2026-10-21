@@ -1,2 +1,1 @@
-const SUPABASE_URL = "https://hhfggbhrxowlvvoglfeo.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_xrtU_thNd4vzqXkO28Cung_flE2xEJb";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
