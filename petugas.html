@@ -50,9 +50,16 @@
         </tbody>
     </table>
 
+    <div id="toast"></div>
+
+    <script src="config.js"></script>
     <script>
-        const SUPABASE_URL = "https://hhfggbhrxowlvvoglfeo.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_xrtU_thNd4vzqXkO28Cung_flE2xEJb";
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); toast.innerText = ""; }, 3000);
+        }
 
         const headers = {
             "apikey": SUPABASE_ANON_KEY,
@@ -81,7 +88,7 @@
                     const statusClass = pasien.status === 'menunggu' ? 'status-menunggu' : 'status-dipanggil';
                     
                     const tombolAksi = pasien.status === 'menunggu' 
-                        ? `<button class="btn-panggil" onclick="panggilPasien(${pasien.id})">📢 Panggil</button>`
+                        ? `<button class="btn-panggil" onclick="panggilPasien(${pasien.id}, this)">📢 Panggil</button>`
                         : `<span class="text-selesai">Selesai dipanggil</span>`;
 
                     const baris = `
@@ -101,7 +108,10 @@
             }
         }
 
-        async function panggilPasien(idPasien) {
+        async function panggilPasien(idPasien, btnElement) {
+            const originalText = btnElement.innerText;
+            btnElement.disabled = true;
+            btnElement.innerText = "Memproses...";
             try {
                 const url = `${SUPABASE_URL}/rest/v1/antrean?id=eq.${idPasien}`;
                 const respon = await fetch(url, {
@@ -123,6 +133,10 @@
 
         // FUNGSI BARU: Untuk mengosongkan seluruh baris di tabel database Supabase
         async function resetSemuaAntrean() {
+            const btnReset = document.getElementById('btnReset');
+            const originalText = btnReset.innerText;
+            btnReset.disabled = true;
+            btnReset.innerText = "Memproses...";
             const konfirmasi = confirm("Apakah Anda yakin ingin MENGHAPUS SEMUA data antrean hari ini?\nTindakan ini tidak bisa dibatalkan dan nomor akan kembali dari angka 1.");
             
             if (!konfirmasi) return;
