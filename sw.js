@@ -1,20 +1,23 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
 
-// Event Fetch (Syarat wajib Chrome agar PWA bisa diinstall ke HP)
+// Penanganan Cache Offline PWA
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
 
-// Pemicu Notifikasi Reset Tiket
+// Pemicu Notifikasi Global
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'NOTIF_RESET') {
-    self.registration.showNotification('Tiket Harian Siap! 🎟️', {
-      body: '10 Tiket gacha kamu sudah siap! Yuk tarik kartu SSR sekarang!',
-      icon: 'https://nekos.best/logo.png',
-      badge: 'https://nekos.best/logo.png',
+    const title = event.data.title || 'Tiket Harian Siap! 🎟️';
+    const body = event.data.body || '10 Tiket gacha kamu sudah berhasil diisi ulang! Yuk gacha sekarang!';
+    
+    self.registration.showNotification(title, {
+      body: body,
+      icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+      badge: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
       vibrate: [200, 100, 200]
     });
   }
