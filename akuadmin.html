@@ -65,7 +65,6 @@
     const channel = new BroadcastChannel('gacha_sync');
 
     window.addEventListener('DOMContentLoaded', () => {
-      // Daftarkan service worker di admin juga agar bisa memicu notifikasi
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(console.error);
       }
@@ -143,11 +142,8 @@
         
         if (result.success) {
           loadUsers();
-
-          // Kirim sinyal broadcast ke tab utama
           channel.postMessage({ type: 'TICKET_UPDATED', targetUser, newTicket });
 
-          // Picu notifikasi jika tiket diisi 10
           if (newTicket === 10) {
             triggerNotification(`Tiket @${targetUser} Diisi Ulang! 🎟️`, '10 Tiket gacha berhasil ditambahkan oleh admin!');
           }
@@ -163,7 +159,7 @@
       } else if ('Notification' in window && Notification.permission === 'granted') {
         new Notification(title, {
           body: body,
-          icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
+          icon: '/icon.png'
         });
       }
     }
