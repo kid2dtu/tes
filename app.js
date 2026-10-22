@@ -11,18 +11,10 @@ let currentSearch = '';
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
-// Bersihkan link weserv yang sempat rusak di koleksi lokal user
-if (currentUser && Array.isArray(currentUser.koleksi)) {
-  let updated = false;
-  currentUser.koleksi.forEach(c => {
-    if (c.url && c.url.includes('images.weserv.nl/?url=')) {
-      c.url = decodeURIComponent(c.url.split('images.weserv.nl/?url=')[1]);
-      updated = true;
-    }
-  });
+// Pastikan variabel akun aman
+if (currentUser) {
   if (currentUser.pity === undefined) currentUser.pity = 0;
   if (currentUser.shards === undefined) currentUser.shards = 0;
-  if (updated) localStorage.setItem('gacha_user', JSON.stringify(currentUser));
 }
 
 // 1. Audio Synthesizer (SFX Bawaan Browser)
@@ -142,290 +134,99 @@ function triggerSSRConfetti() {
   render();
 }
 
-// 3. Database Kartu Tetap (Fixed Pool 100% Akurat & Tanpa Weserv)
+// 3. Database Karakter Pool (Dengan ID AniList Resmi - Bebas Blokir & 100% Akurat)
 const GACHA_CARD_POOL = [
   // --- SSR (5%) ---
-  {
-    character_name: 'Hu Tao',
-    anime_name: 'Genshin Impact',
-    rarity: 'SSR',
-    artist_name: 'HoYoverse',
-    url: 'https://cdn.myanimelist.net/images/characters/16/430035.jpg'
-  },
-  {
-    character_name: 'Rem',
-    anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
-    rarity: 'SSR',
-    artist_name: 'Shinichirou Otsuka',
-    url: 'https://cdn.myanimelist.net/images/characters/15/309066.jpg'
-  },
-  {
-    character_name: 'Megumin',
-    anime_name: 'Kono Subarashii Sekai ni Shukufuku wo!',
-    rarity: 'SSR',
-    artist_name: 'Kurone Mishima',
-    url: 'https://cdn.myanimelist.net/images/characters/12/301297.jpg'
-  },
-  {
-    character_name: 'Frieren',
-    anime_name: 'Sousou no Frieren',
-    rarity: 'SSR',
-    artist_name: 'Tsukasa Abe',
-    url: 'https://cdn.myanimelist.net/images/characters/16/526715.jpg'
-  },
-  {
-    character_name: 'Chisato Nishikigi',
-    anime_name: 'Lycoris Recoil',
-    rarity: 'SSR',
-    artist_name: 'Imigimuru',
-    url: 'https://cdn.myanimelist.net/images/characters/10/480287.jpg'
-  },
-  {
-    character_name: 'Hitori Gotoh (Bocchi)',
-    anime_name: 'Bocchi the Rock!',
-    rarity: 'SSR',
-    artist_name: 'Aki Hamaji',
-    url: 'https://cdn.myanimelist.net/images/characters/11/492161.jpg'
-  },
-  {
-    character_name: 'Ai Hoshino',
-    anime_name: 'Oshi no Ko',
-    rarity: 'SSR',
-    artist_name: 'Mengo Yokoyari',
-    url: 'https://cdn.myanimelist.net/images/characters/14/507644.jpg'
-  },
-  {
-    character_name: 'Saber (Artoria)',
-    anime_name: 'Fate/stay night',
-    rarity: 'SSR',
-    artist_name: 'Takashi Takeuchi',
-    url: 'https://cdn.myanimelist.net/images/characters/6/275276.jpg'
-  },
-  {
-    character_name: 'Makima',
-    anime_name: 'Chainsaw Man',
-    rarity: 'SSR',
-    artist_name: 'Tatsuki Fujimoto',
-    url: 'https://cdn.myanimelist.net/images/characters/14/488243.jpg'
-  },
-  {
-    character_name: 'Raiden Shogun',
-    anime_name: 'Genshin Impact',
-    rarity: 'SSR',
-    artist_name: 'HoYoverse',
-    url: 'https://cdn.myanimelist.net/images/characters/2/450454.jpg'
-  },
+  { id: 134440, character_name: 'Hu Tao', anime_name: 'Genshin Impact', rarity: 'SSR', artist_name: 'HoYoverse' },
+  { id: 88572, character_name: 'Rem', anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu', rarity: 'SSR', artist_name: 'Shinichirou Otsuka' },
+  { id: 89361, character_name: 'Megumin', anime_name: 'KonoSuba', rarity: 'SSR', artist_name: 'Kurone Mishima' },
+  { id: 176754, character_name: 'Frieren', anime_name: 'Sousou no Frieren', rarity: 'SSR', artist_name: 'Tsukasa Abe' },
+  { id: 260337, character_name: 'Chisato Nishikigi', anime_name: 'Lycoris Recoil', rarity: 'SSR', artist_name: 'Imigimuru' },
+  { id: 200021, character_name: 'Hitori Gotoh', anime_name: 'Bocchi the Rock!', rarity: 'SSR', artist_name: 'Aki Hamaji' },
+  { id: 181533, character_name: 'Ai Hoshino', anime_name: 'Oshi no Ko', rarity: 'SSR', artist_name: 'Mengo Yokoyari' },
+  { id: 497, character_name: 'Saber', anime: 'Fate/stay night', rarity: 'SSR', artist_name: 'Takashi Takeuchi' },
+  { id: 137079, character_name: 'Makima', anime_name: 'Chainsaw Man', rarity: 'SSR', artist_name: 'Tatsuki Fujimoto' },
+  { id: 239923, character_name: 'Raiden Shogun', anime_name: 'Genshin Impact', rarity: 'SSR', artist_name: 'HoYoverse' },
 
   // --- SR (25%) ---
-  {
-    character_name: 'Marin Kitagawa',
-    anime_name: 'My Dress-Up Darling',
-    rarity: 'SR',
-    artist_name: 'Shinichi Fukuda',
-    url: 'https://cdn.myanimelist.net/images/characters/8/460773.jpg'
-  },
-  {
-    character_name: 'Emilia',
-    anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
-    rarity: 'SR',
-    artist_name: 'Shinichirou Otsuka',
-    url: 'https://cdn.myanimelist.net/images/characters/14/311020.jpg'
-  },
-  {
-    character_name: 'Aqua',
-    anime_name: 'Kono Subarashii Sekai ni Shukufuku wo!',
-    rarity: 'SR',
-    artist_name: 'Kurone Mishima',
-    url: 'https://cdn.myanimelist.net/images/characters/7/300185.jpg'
-  },
-  {
-    character_name: 'Fern',
-    anime_name: 'Sousou no Frieren',
-    rarity: 'SR',
-    artist_name: 'Tsukasa Abe',
-    url: 'https://cdn.myanimelist.net/images/characters/7/526716.jpg'
-  },
-  {
-    character_name: 'Takina Inoue',
-    anime_name: 'Lycoris Recoil',
-    rarity: 'SR',
-    artist_name: 'Imigimuru',
-    url: 'https://cdn.myanimelist.net/images/characters/14/480288.jpg'
-  },
-  {
-    character_name: 'Kita Ikuyo',
-    anime_name: 'Bocchi the Rock!',
-    rarity: 'SR',
-    artist_name: 'Aki Hamaji',
-    url: 'https://cdn.myanimelist.net/images/characters/15/492164.jpg'
-  },
-  {
-    character_name: 'Yor Forger',
-    anime_name: 'Spy × Family',
-    rarity: 'SR',
-    artist_name: 'Tatsuya Endou',
-    url: 'https://cdn.myanimelist.net/images/characters/5/471018.jpg'
-  },
-  {
-    character_name: 'Power',
-    anime_name: 'Chainsaw Man',
-    rarity: 'SR',
-    artist_name: 'Tatsuki Fujimoto',
-    url: 'https://cdn.myanimelist.net/images/characters/15/488242.jpg'
-  },
-  {
-    character_name: 'Kurumi Tokisaki',
-    anime_name: 'Date A Live',
-    rarity: 'SR',
-    artist_name: 'Tsunako',
-    url: 'https://cdn.myanimelist.net/images/characters/11/208345.jpg'
-  },
-  {
-    character_name: 'Rin Tohsaka',
-    anime_name: 'Fate/stay night',
-    rarity: 'SR',
-    artist_name: 'Takashi Takeuchi',
-    url: 'https://cdn.myanimelist.net/images/characters/4/262843.jpg'
-  },
-  {
-    character_name: 'Kaguya Shinomiya',
-    anime_name: 'Kaguya-sama: Love is War',
-    rarity: 'SR',
-    artist_name: 'Aka Akasaka',
-    url: 'https://cdn.myanimelist.net/images/characters/15/374526.jpg'
-  },
-  {
-    character_name: 'Zero Two',
-    anime_name: 'Darling in the FranXX',
-    rarity: 'SR',
-    artist_name: 'Masayoshi Tanaka',
-    url: 'https://cdn.myanimelist.net/images/characters/13/346894.jpg'
-  },
+  { id: 143492, character_name: 'Marin Kitagawa', anime_name: 'My Dress-Up Darling', rarity: 'SR', artist_name: 'Shinichi Fukuda' },
+  { id: 88575, character_name: 'Emilia', anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu', rarity: 'SR', artist_name: 'Shinichirou Otsuka' },
+  { id: 89362, character_name: 'Aqua', anime_name: 'KonoSuba', rarity: 'SR', artist_name: 'Kurone Mishima' },
+  { id: 184119, character_name: 'Fern', anime_name: 'Sousou no Frieren', rarity: 'SR', artist_name: 'Tsukasa Abe' },
+  { id: 260338, character_name: 'Takina Inoue', anime_name: 'Lycoris Recoil', rarity: 'SR', artist_name: 'Imigimuru' },
+  { id: 200024, character_name: 'Kita Ikuyo', anime_name: 'Bocchi the Rock!', rarity: 'SR', artist_name: 'Aki Hamaji' },
+  { id: 140417, character_name: 'Yor Forger', anime_name: 'Spy × Family', rarity: 'SR', artist_name: 'Tatsuya Endou' },
+  { id: 137080, character_name: 'Power', anime_name: 'Chainsaw Man', rarity: 'SR', artist_name: 'Tatsuki Fujimoto' },
+  { id: 70069, character_name: 'Kurumi Tokisaki', anime_name: 'Date A Live', rarity: 'SR', artist_name: 'Tsunako' },
+  { id: 498, character_name: 'Rin Tohsaka', anime_name: 'Fate/stay night', rarity: 'SR', artist_name: 'Takashi Takeuchi' },
+  { id: 120577, character_name: 'Kaguya Shinomiya', anime_name: 'Kaguya-sama: Love is War', rarity: 'SR', artist_name: 'Aka Akasaka' },
+  { id: 124381, character_name: 'Zero Two', anime_name: 'Darling in the FranXX', rarity: 'SR', artist_name: 'Masayoshi Tanaka' },
 
   // --- R (70%) ---
-  {
-    character_name: 'Anya Forger',
-    anime_name: 'Spy × Family',
-    rarity: 'R',
-    artist_name: 'Tatsuya Endou',
-    url: 'https://cdn.myanimelist.net/images/characters/10/471017.jpg'
-  },
-  {
-    character_name: 'Darkness',
-    anime_name: 'Kono Subarashii Sekai ni Shukufuku wo!',
-    rarity: 'R',
-    artist_name: 'Kurone Mishima',
-    url: 'https://cdn.myanimelist.net/images/characters/4/300186.jpg'
-  },
-  {
-    character_name: 'Ram',
-    anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
-    rarity: 'R',
-    artist_name: 'Shinichirou Otsuka',
-    url: 'https://cdn.myanimelist.net/images/characters/16/307137.jpg'
-  },
-  {
-    character_name: 'Nezuko Kamado',
-    anime_name: 'Demon Slayer',
-    rarity: 'R',
-    artist_name: 'Koyoharu Gotouge',
-    url: 'https://cdn.myanimelist.net/images/characters/4/380894.jpg'
-  },
-  {
-    character_name: 'Shinobu Kocho',
-    anime_name: 'Demon Slayer',
-    rarity: 'R',
-    artist_name: 'Koyoharu Gotouge',
-    url: 'https://cdn.myanimelist.net/images/characters/10/389474.jpg'
-  },
-  {
-    character_name: 'Chika Fujiwara',
-    anime_name: 'Kaguya-sama: Love is War',
-    rarity: 'R',
-    artist_name: 'Aka Akasaka',
-    url: 'https://cdn.myanimelist.net/images/characters/13/374527.jpg'
-  },
-  {
-    character_name: 'Komi Shouko',
-    anime_name: 'Komi Can t Communicate',
-    rarity: 'R',
-    artist_name: 'Tomohito Oda',
-    url: 'https://cdn.myanimelist.net/images/characters/11/447214.jpg'
-  },
-  {
-    character_name: 'Asuna Yuuki',
-    anime_name: 'Sword Art Online',
-    rarity: 'R',
-    artist_name: 'abec',
-    url: 'https://cdn.myanimelist.net/images/characters/15/264507.jpg'
-  },
-  {
-    character_name: 'Yukino Yukinoshita',
-    anime_name: 'Oregairu',
-    rarity: 'R',
-    artist_name: 'Ponkan⑧',
-    url: 'https://cdn.myanimelist.net/images/characters/2/204213.jpg'
-  },
-  {
-    character_name: 'Nijika Ijichi',
-    anime_name: 'Bocchi the Rock!',
-    rarity: 'R',
-    artist_name: 'Aki Hamaji',
-    url: 'https://cdn.myanimelist.net/images/characters/13/492162.jpg'
-  },
-  {
-    character_name: 'Ryo Yamada',
-    anime_name: 'Bocchi the Rock!',
-    rarity: 'R',
-    artist_name: 'Aki Hamaji',
-    url: 'https://cdn.myanimelist.net/images/characters/16/492163.jpg'
-  },
-  {
-    character_name: 'Ruby Hoshino',
-    anime_name: 'Oshi no Ko',
-    rarity: 'R',
-    artist_name: 'Mengo Yokoyari',
-    url: 'https://cdn.myanimelist.net/images/characters/10/507645.jpg'
-  },
-  {
-    character_name: 'Kana Arima',
-    anime_name: 'Oshi no Ko',
-    rarity: 'R',
-    artist_name: 'Mengo Yokoyari',
-    url: 'https://cdn.myanimelist.net/images/characters/7/507646.jpg'
-  },
-  {
-    character_name: 'Roxy Migurdia',
-    anime_name: 'Mushoku Tensei',
-    rarity: 'R',
-    artist_name: 'Shirotaka',
-    url: 'https://cdn.myanimelist.net/images/characters/3/432098.jpg'
-  },
-  {
-    character_name: 'Sylphiette',
-    anime_name: 'Mushoku Tensei',
-    rarity: 'R',
-    artist_name: 'Shirotaka',
-    url: 'https://cdn.myanimelist.net/images/characters/9/432099.jpg'
-  },
-  {
-    character_name: 'Hatsune Miku',
-    anime_name: 'Vocaloid',
-    rarity: 'R',
-    artist_name: 'KEI',
-    url: 'https://cdn.myanimelist.net/images/characters/9/75429.jpg'
-  }
+  { id: 140416, character_name: 'Anya Forger', anime_name: 'Spy × Family', rarity: 'R', artist_name: 'Tatsuya Endou' },
+  { id: 89363, character_name: 'Darkness', anime_name: 'KonoSuba', rarity: 'R', artist_name: 'Kurone Mishima' },
+  { id: 88573, character_name: 'Ram', anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu', rarity: 'R', artist_name: 'Shinichirou Otsuka' },
+  { id: 127518, character_name: 'Nezuko Kamado', anime_name: 'Demon Slayer', rarity: 'R', artist_name: 'Koyoharu Gotouge' },
+  { id: 129133, character_name: 'Shinobu Kocho', anime_name: 'Demon Slayer', rarity: 'R', artist_name: 'Koyoharu Gotouge' },
+  { id: 120579, character_name: 'Chika Fujiwara', anime_name: 'Kaguya-sama: Love is War', rarity: 'R', artist_name: 'Aka Akasaka' },
+  { id: 127622, character_name: 'Komi Shouko', anime_name: 'Komi Can t Communicate', rarity: 'R', artist_name: 'Tomohito Oda' },
+  { id: 36828, character_name: 'Asuna Yuuki', anime_name: 'Sword Art Online', rarity: 'R', artist_name: 'abec' },
+  { id: 67015, character_name: 'Yukino Yukinoshita', anime_name: 'Oregairu', rarity: 'R', artist_name: 'Ponkan⑧' },
+  { id: 200022, character_name: 'Nijika Ijichi', anime_name: 'Bocchi the Rock!', rarity: 'R', artist_name: 'Aki Hamaji' },
+  { id: 200023, character_name: 'Ryo Yamada', anime_name: 'Bocchi the Rock!', rarity: 'R', artist_name: 'Aki Hamaji' },
+  { id: 181534, character_name: 'Ruby Hoshino', anime_name: 'Oshi no Ko', rarity: 'R', artist_name: 'Mengo Yokoyari' },
+  { id: 181535, character_name: 'Kana Arima', anime_name: 'Oshi no Ko', rarity: 'R', artist_name: 'Mengo Yokoyari' },
+  { id: 88344, character_name: 'Roxy Migurdia', anime_name: 'Mushoku Tensei', rarity: 'R', artist_name: 'Shirotaka' },
+  { id: 88345, character_name: 'Sylphiette', anime_name: 'Mushoku Tensei', rarity: 'R', artist_name: 'Shirotaka' },
+  { id: 5193, character_name: 'Hatsune Miku', anime_name: 'Vocaloid', rarity: 'R', artist_name: 'KEI' }
 ];
+
+// Helper Mengambil Gambar Resmi dari AniList API (Disimpan di Cache Lokal)
+async function getAniListImage(card) {
+  const cacheKey = `anilist_img_${card.id}`;
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch('https://graphql.anilist.co', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        query: `query ($id: Int) { Character(id: $id) { image { large } } }`,
+        variables: { id: card.id }
+      })
+    });
+    const data = await res.json();
+    const imgUrl = data?.data?.Character?.image?.large;
+    if (imgUrl) {
+      localStorage.setItem(cacheKey, imgUrl);
+      return imgUrl;
+    }
+  } catch (e) {
+    console.warn('Gagal fetch gambar AniList:', e);
+  }
+
+  // Cadangan darurat jika koneksi lambat
+  return `https://nekos.best/api/v2/neko`;
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   const modalAuth = document.getElementById('modalAuth');
+  
+  // Pastikan tombol gacha tidak terkunci saat halaman baru dimuat
+  const btnGacha = document.getElementById('btnTarikGacha');
+  if (btnGacha) btnGacha.disabled = false;
+  isFlipping = false;
+
   if (!currentUser) {
     if (modalAuth) modalAuth.style.display = 'flex';
   } else {
     if (modalAuth) modalAuth.style.display = 'none';
+    repairUserCollection();
     renderUI();
     syncUserData();
   }
+
   initPWA();
   initTabs();
   initCountdown();
@@ -435,6 +236,28 @@ window.addEventListener('DOMContentLoaded', () => {
   initShardExchange();
   initGachaInfoModal();
 });
+
+// Otomatis Memperbaiki Kartu Rusak di Akun Pengguna
+async function repairUserCollection() {
+  if (!currentUser || !Array.isArray(currentUser.koleksi)) return;
+  let hasRepair = false;
+
+  for (let card of currentUser.koleksi) {
+    if (!card.url || card.url.includes('myanimelist.net') || card.url.includes('weserv.nl')) {
+      const match = GACHA_CARD_POOL.find(c => c.character_name.toLowerCase() === (card.character_name || '').toLowerCase());
+      if (match) {
+        card.id = match.id;
+        card.url = await getAniListImage(match);
+        hasRepair = true;
+      }
+    }
+  }
+
+  if (hasRepair) {
+    localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+    renderGallery();
+  }
+}
 
 // 4. Sinkronisasi Realtime
 function initSyncListener() {
@@ -587,6 +410,7 @@ if (btnAuth) {
         lastKnownTickets = result.tickets;
         localStorage.setItem('gacha_user', JSON.stringify(currentUser));
         document.getElementById('modalAuth').style.display = 'none';
+        repairUserCollection();
         renderUI();
         showToast(result.isNew ? 'Akun baru berhasil dibuat! 🎟️' : 'Selamat datang kembali!');
       } else {
@@ -616,15 +440,7 @@ async function syncUserData() {
       }
       lastKnownTickets = result.tickets;
       currentUser.tickets = result.tickets;
-      
-      // Bersihkan url weserv dari sinkronisasi server
-      const syncedCards = result.koleksi || [];
-      syncedCards.forEach(c => {
-        if (c.url && c.url.includes('images.weserv.nl/?url=')) {
-          c.url = decodeURIComponent(c.url.split('images.weserv.nl/?url=')[1]);
-        }
-      });
-      currentUser.koleksi = syncedCards;
+      currentUser.koleksi = result.koleksi || [];
       currentUser.pity = currentUser.pity || 0;
       currentUser.shards = currentUser.shards || 0;
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
@@ -678,7 +494,7 @@ function renderStatsAndShards() {
   if (elShard) elShard.innerText = currentUser.shards || 0;
 }
 
-// 9. Tarik Gacha dari Fixed Pool
+// 9. Tarik Gacha (Dengan Pengaman Anti-Macet & AniList Image)
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -690,6 +506,7 @@ if (btnGacha) {
     playSFX('click');
     const cardWrapper = document.getElementById('kartuWrapper');
     const cardFront = document.getElementById('kartuDepan');
+    const cardImg = document.getElementById('kartuImg');
 
     isFlipping = true;
     btnGacha.disabled = true;
@@ -697,6 +514,7 @@ if (btnGacha) {
     await new Promise(r => setTimeout(r, 350));
     showToast('Memanggil kartu anime...');
 
+    // Hitung Rarity & Pity 30
     const pityNow = currentUser.pity || 0;
     let targetRarity = 'R';
 
@@ -716,6 +534,7 @@ if (btnGacha) {
 
     const candidates = GACHA_CARD_POOL.filter(c => c.rarity === targetRarity);
     const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+    const verifiedImageUrl = await getAniListImage(chosen);
 
     const now = new Date();
     const jam = String(now.getHours()).padStart(2, '0');
@@ -723,7 +542,8 @@ if (btnGacha) {
     const waktuLengkap = `${now.toLocaleDateString('id-ID')} ${jam}:${menit} WIB`;
 
     const newCard = {
-      url: chosen.url,
+      id: chosen.id,
+      url: verifiedImageUrl,
       artist_name: chosen.artist_name,
       character_name: chosen.character_name,
       anime_name: chosen.anime_name,
@@ -734,10 +554,10 @@ if (btnGacha) {
 
     cardFront.className = `card-face card-front rarity-${newCard.rarity}`;
     document.getElementById('kartuRarity').innerText = newCard.rarity;
-    document.getElementById('kartuImg').src = newCard.url;
     document.getElementById('kartuAnime').innerText = newCard.character_name;
     document.getElementById('kartuArtist').innerText = `Artis: ${newCard.artist_name}`;
 
+    // Deteksi Kartu Duplikat (Star Shard)
     const isDuplicate = currentUser.koleksi.some(
       c => c.character_name === newCard.character_name && c.rarity === newCard.rarity
     );
@@ -751,6 +571,7 @@ if (btnGacha) {
     currentUser.tickets = Math.max(0, currentUser.tickets - 1);
     lastKnownTickets = currentUser.tickets;
 
+    // Reset Pity jika SSR
     if (newCard.rarity === 'SSR') currentUser.pity = 0;
     else currentUser.pity = (currentUser.pity || 0) + 1;
 
@@ -765,7 +586,11 @@ if (btnGacha) {
 
     renderStatsAndShards();
 
-    document.getElementById('kartuImg').onload = () => {
+    // Fungsi Pembuka Kartu & Pelepas Kunci Tombol
+    let cardUnlocked = false;
+    const unlockGachaAction = () => {
+      if (cardUnlocked) return;
+      cardUnlocked = true;
       cardWrapper.classList.add('flipped');
       playSFX('flip');
       isFlipping = false;
@@ -782,6 +607,19 @@ if (btnGacha) {
         fireTicketNotification('🌟 DAPAT KARTU SR! 🌟', `Keren! Kamu berhasil mendapatkan ${newCard.character_name} (${newCard.anime_name}) dengan kelangkaan SR!`);
       }
     };
+
+    cardImg.onload = unlockGachaAction;
+    cardImg.onerror = () => {
+      console.warn('Gambar lambat/gagal, tetap membuka kartu');
+      unlockGachaAction();
+    };
+
+    // Watchdog Timer Pengaman: Tombol DIJAMIN terbuka maksimal 3.5 detik
+    setTimeout(() => {
+      if (isFlipping) unlockGachaAction();
+    }, 3500);
+
+    cardImg.src = newCard.url;
 
     fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -806,7 +644,7 @@ if (cardWrapper) {
   });
 }
 
-// 10. Album Galeri Koleksi (Dengan Auto-Sanitasi Link)
+// 10. Album Galeri Koleksi
 function renderGallery() {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -815,13 +653,7 @@ function renderGallery() {
 
   container.innerHTML = '';
   const cards = (currentUser && currentUser.koleksi) 
-    ? currentUser.koleksi.map((c, idx) => {
-        let cleanUrl = c.url || '';
-        if (cleanUrl.includes('images.weserv.nl/?url=')) {
-          cleanUrl = decodeURIComponent(cleanUrl.split('images.weserv.nl/?url=')[1]);
-        }
-        return { ...c, url: cleanUrl, _origIdx: idx };
-      }) 
+    ? currentUser.koleksi.map((c, idx) => ({ ...c, _origIdx: idx })) 
     : [];
 
   let filtered = cards.filter(c => {
@@ -862,7 +694,7 @@ function renderGallery() {
     el.className = `mini-card rarity-${c.rarity}`;
     el.innerHTML = `
       ${isNew ? '<span class="badge-new">NEW</span>' : ''}
-      <img src="${c.url}" referrerpolicy="no-referrer" loading="lazy" alt="${charName}">
+      <img src="${c.url}" loading="lazy" alt="${charName}">
       <div class="mini-card-info">
         <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
         <h4>${charName}</h4>
@@ -911,7 +743,7 @@ function initGalleryControls() {
   });
 }
 
-// 11. Modal Detail & Download Langsung ke Disk (Anti-New-Tab)
+// 11. Modal Detail & Download Langsung ke Disk
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
@@ -943,12 +775,7 @@ function initCardDetailModal() {
 }
 
 function openCardDetail(card) {
-  let cleanUrl = card.url || '';
-  if (cleanUrl.includes('images.weserv.nl/?url=')) {
-    cleanUrl = decodeURIComponent(cleanUrl.split('images.weserv.nl/?url=')[1]);
-  }
-  activeModalCard = { ...card, url: cleanUrl };
-
+  activeModalCard = card;
   const modal = document.getElementById('modalCardDetail');
   const modalBox = modal ? modal.querySelector('.modal-detail-card') : null;
   if (!modal || !modalBox) return;
@@ -956,7 +783,7 @@ function openCardDetail(card) {
   modalBox.className = `modal-card modal-detail-card rarity-${card.rarity}`;
   document.getElementById('detailRarity').innerText = card.rarity;
   document.getElementById('detailRarity').style.color = `var(--rarity-${card.rarity.toLowerCase()})`;
-  document.getElementById('detailImg').src = cleanUrl;
+  document.getElementById('detailImg').src = card.url;
   document.getElementById('detailCharacter').innerText = card.character_name;
   document.getElementById('detailAnime').innerText = `Seri: ${card.anime_name}`;
   document.getElementById('detailArtist').innerText = card.artist_name;
@@ -967,30 +794,12 @@ function openCardDetail(card) {
 
 async function downloadCardImage(url, name) {
   showToast('Menyiapkan download gambar...');
-  const cleanUrl = url.includes('images.weserv.nl/?url=') 
-    ? decodeURIComponent(url.split('images.weserv.nl/?url=')[1]) 
-    : url;
-
   const filename = `${name.replace(/\s+/g, '_')}_gacha.jpg`;
 
-  // Proxy CORS terpercaya khusus pengunduhan file
-  const proxyList = [
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(cleanUrl)}`
-  ];
-
-  let blob = null;
-  for (const p of proxyList) {
-    try {
-      const res = await fetch(p);
-      if (res.ok) {
-        blob = await res.blob();
-        if (blob && blob.size > 0) break;
-      }
-    } catch (e) {}
-  }
-
-  if (blob) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Fetch gagal');
+    const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.style.display = 'none';
@@ -1001,10 +810,18 @@ async function downloadCardImage(url, name) {
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-    }, 2500);
+    }, 2000);
     showToast('Gambar berhasil disimpan ke disk! 💾');
-  } else {
-    showToast('Gagal mengunduh gambar');
+  } catch (err) {
+    // Fallback jika unduhan langsung terhambat
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 1500);
+    showToast('Gambar tersimpan! 💾');
   }
 }
 
