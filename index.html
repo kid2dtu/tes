@@ -4,10 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>Anime Gacha Harian</title>
-  
   <!-- Anti-Blokir Hotlink Gambar Anime -->
   <meta name="referrer" content="no-referrer">
-  
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
   <link rel="manifest" href="/manifest.json">
@@ -31,12 +29,12 @@
         <label>Username</label>
         <input type="text" id="authUsername" placeholder="contoh: elin" autocomplete="off" autocapitalize="none">
       </div>
-      
+
       <div class="form-group">
         <label>PIN (4 Digit Angka)</label>
         <input type="password" id="authPin" maxlength="4" placeholder="••••" inputmode="numeric">
       </div>
-      
+
       <button id="btnAuthSubmit" class="btn-primary">Masuk / Daftar</button>
       <div id="authError" class="auth-error"></div>
     </div>
@@ -47,7 +45,7 @@
     <div class="modal-card modal-info-card">
       <button id="btnCloseInfo" class="btn-close-modal">✕</button>
       <h3>📜 Rincian & Aturan Gacha</h3>
-
+      
       <div class="info-nav">
         <button id="btnSubRate" class="info-tab-btn active">Peluang & Aturan</button>
         <button id="btnSubDrop" class="info-tab-btn">Daftar Karakter Pool</button>
@@ -205,11 +203,11 @@
           <h2>Album Koleksi</h2>
           <span id="txtKoleksiCount" class="badge-count">0 Kartu</span>
         </div>
-
+        
         <div class="search-box">
           <input type="text" id="inputSearchGaleri" placeholder="🔍 Cari karakter / anime..." autocomplete="off">
         </div>
-        
+
         <div class="gallery-controls">
           <div class="rarity-filters">
             <button class="filter-chip active" data-filter="all">Semua</button>
@@ -217,7 +215,7 @@
             <button class="filter-chip" data-filter="SR">SR</button>
             <button class="filter-chip" data-filter="R">R</button>
           </div>
-          
+
           <div class="sort-box">
             <select id="sortSelect" class="sort-dropdown">
               <option value="date">Waktu Diperoleh (Terbaru)</option>
@@ -227,8 +225,9 @@
           </div>
         </div>
       </div>
-      
+
       <div id="gridGaleri" class="gallery-grid"></div>
+      
       <div id="galeriKosong" class="empty-state">
         <p>Belum ada kartu di koleksi kamu. Ayo tarik gacha pertamamu!</p>
       </div>
@@ -318,6 +317,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="app.js"></script>
+  <!-- Cache buster ?v=4 agar script terbaru langsung aktif -->
+  <script src="app.js?v=4"></script>
 </body>
 </html>
