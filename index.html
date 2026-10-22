@@ -44,11 +44,11 @@
     <div class="modal-card modal-info-card">
       <button id="btnCloseInfo" class="btn-close-modal">✕</button>
       <h3>📜 Rincian & Aturan Gacha</h3>
-      
+
       <!-- Navigasi Sub-Tab Info -->
       <div class="info-nav">
         <button id="btnSubRate" class="info-tab-btn active">Peluang & Aturan</button>
-        <button id="btnSubDrop" class="info-tab-btn">Daftar Drop (150+)</button>
+        <button id="btnSubDrop" class="info-tab-btn">Daftar Karakter (150+)</button>
       </div>
 
       <!-- Konten 1: Rate & Aturan -->
@@ -56,7 +56,7 @@
         <div class="rate-table">
           <div class="rate-row rate-ssr">
             <span class="rate-badge">SSR</span>
-            <span class="rate-desc">Super Super Rare (Animasi / GIF)</span>
+            <span class="rate-desc">Super Super Rare (Animasi GIF)</span>
             <span class="rate-pct">5%</span>
           </div>
           <div class="rate-row rate-sr">
@@ -66,7 +66,7 @@
           </div>
           <div class="rate-row rate-r">
             <span class="rate-badge">R</span>
-            <span class="rate-desc">Rare</span>
+            <span class="rate-desc">Rare (Standar)</span>
             <span class="rate-pct">70%</span>
           </div>
         </div>
@@ -76,7 +76,7 @@
             <span class="rule-icon">🎯</span>
             <div>
               <strong>Sistem Pity (30 Tarikan)</strong>
-              <p>Jika dalam 29 tarikan belum memperoleh SSR, tarikan ke-30 dijamin 100% kartu SSR. Counter Pity otomatis di-reset ke 0 begitu memperoleh kartu SSR kapan pun.</p>
+              <p>Jika dalam 29 tarikan belum dapat SSR, tarikan ke-30 dijamin 100% kartu SSR. Counter Pity otomatis kembali ke 0 begitu dapat SSR kapan pun.</p>
             </div>
           </div>
           <div class="rule-item">
@@ -90,7 +90,7 @@
             <span class="rule-icon">⭐</span>
             <div>
               <strong>Star Shard (Daur Ulang)</strong>
-              <p>Setiap tarikan kartu kembar (karakter & rarity sama) otomatis menghasilkan +1 Star Shard. 5 Star Shard dapat ditukarkan menjadi +1 Tiket Gacha.</p>
+              <p>Setiap tarikan kartu kembar (karakter & rarity sama) otomatis menghasilkan +1 Star Shard. 5 Star Shard bisa ditukar jadi +1 Tiket Gacha.</p>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@
       <!-- Konten 2: Drop List Karakter -->
       <div id="infoContentDrop" class="info-content-pane">
         <div class="drop-search-box">
-          <input type="text" id="inputSearchDrop" placeholder="🔍 Cari nama karakter / judul anime..." autocomplete="off">
+          <input type="text" id="inputSearchDrop" placeholder="🔍 Cari nama karakter / anime..." autocomplete="off">
         </div>
         <div id="dropListContainer" class="drop-list-scroll"></div>
       </div>
@@ -153,12 +153,12 @@
         </div>
       </div>
 
-      <!-- Bilah Progres Pity 30 SSR + Tombol Detail Rincian -->
+      <!-- Bilah Progres Pity 30 SSR + Tombol Rincian Rate -->
       <div class="pity-card">
         <div class="pity-header">
           <div class="pity-title-group">
             <span class="pity-label">✨ Pity SSR (Jaminan 30)</span>
-            <button id="btnBukaInfoGacha" class="btn-mini-info" title="Lihat Aturan & Drop List">ℹ️ Rincian</button>
+            <button id="btnBukaInfoGacha" class="btn-mini-info" type="button" title="Lihat Aturan & Drop List">ℹ️ Rincian Rate</button>
           </div>
           <span id="txtPityCount" class="pity-number">0 / 30</span>
         </div>
