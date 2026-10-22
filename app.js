@@ -99,8 +99,9 @@ window.addEventListener('DOMContentLoaded', () => {
   initSortListener();
 });
 
-// 1. Sinkronisasi Realtime dengan Admin
+// 1. Sinkronisasi Realtime Antar-Perangkat (Polling Cepat & Broadcast)
 function initSyncListener() {
+  // Sinyal lokal (jika admin & web dibuka di perangkat yang sama)
   syncChannel.onmessage = (event) => {
     if (event.data && event.data.type === 'TICKET_UPDATED') {
       if (currentUser && currentUser.username === event.data.targetUser) {
@@ -114,11 +115,23 @@ function initSyncListener() {
     }
   };
 
+  // Cek server saat tab/PWA dibuka kembali atau disentuh
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && currentUser) {
       syncUserData();
     }
   });
+
+  window.addEventListener('focus', () => {
+    if (currentUser) syncUserData();
+  });
+
+  // Auto-Polling berkala setiap 5 detik saat aplikasi sedang aktif di layar HP
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && currentUser && !isFlipping) {
+      syncUserData();
+    }
+  }, 5000);
 }
 
 // 2. Inisialisasi PWA & Notifikasi
@@ -343,7 +356,6 @@ if (btnGacha) {
       const charName = (item.anime_name && item.anime_name !== 'Original Character') ? item.anime_name : identity.char;
       const animeName = identity.anime;
 
-      // Catat Tanggal & Jam Menit Presisi
       const now = new Date();
       const jam = String(now.getHours()).padStart(2, '0');
       const menit = String(now.getMinutes()).padStart(2, '0');
@@ -420,7 +432,7 @@ function renderGallery(filter = 'all') {
   if (!container || !emptyBox) return;
 
   container.innerHTML = '';
-  
+
   const cards = (currentUser && currentUser.koleksi) 
     ? currentUser.koleksi.map((c, idx) => ({ ...c, _origIdx: idx })) 
     : [];
@@ -437,7 +449,6 @@ function renderGallery(filter = 'all') {
   }
   emptyBox.style.display = 'none';
 
-  // Urutkan Sesuai Opsi
   const rarityRank = { 'SSR': 3, 'SR': 2, 'R': 1 };
   filtered.sort((a, b) => {
     if (currentSort === 'name') {
@@ -449,7 +460,6 @@ function renderGallery(filter = 'all') {
       if (rankDiff !== 0) return rankDiff;
       return a._origIdx - b._origIdx;
     } else {
-      // Default: Waktu Diperoleh (Terbaru = Index Paling Depan)
       return a._origIdx - b._origIdx;
     }
   });
