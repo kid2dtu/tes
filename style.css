@@ -198,7 +198,7 @@ body {
 .btn-gacha:active { transform: scale(0.98); }
 .btn-gacha:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Galeri Koleksi */
+/* Galeri Koleksi Header */
 .gallery-header { margin-bottom: 16px; }
 .gallery-title-wrap {
   display: flex;
@@ -218,18 +218,48 @@ body {
   letter-spacing: 0.3px;
 }
 
-.rarity-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+/* Kontrol Filter & Dropdown Sort */
+.gallery-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.rarity-filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .filter-chip {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
   color: var(--text-muted);
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
 .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.sort-box {
+  display: flex;
+  align-items: center;
+}
+.sort-dropdown {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  color: #cbd5e1;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+}
+.sort-dropdown option {
+  background: #0f172a;
+  color: #fff;
+}
+
+/* Grid Kartu Koleksi */
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
