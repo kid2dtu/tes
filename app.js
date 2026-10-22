@@ -7,7 +7,6 @@ let isFlipping = false;
 let currentFilter = 'all';
 let currentSort = 'date';
 let currentSearch = '';
-let livePool = [];
 const syncChannel = new BroadcastChannel('gacha_sync');
 
 if (currentUser) {
@@ -80,7 +79,7 @@ function triggerSSRConfetti() {
   render();
 }
 
-// 3. Engine Gambar AniList & Auto-Repair
+// 3. Engine Gambar & Auto-Repair AniList
 async function fetchRealImageByName(charName) {
   const cacheKey = `img_${charName.toLowerCase().replace(/\s+/g, '_')}`;
   const cached = localStorage.getItem(cacheKey);
@@ -116,44 +115,67 @@ window.handleImageError = async function(imgElement, charName, cardIdx) {
   }
 };
 
-// 4. Engine Pool Karakter AniList Live
-async function loadLivePool() {
-  const cached = localStorage.getItem('anilist_pool_cache');
+// 4. Engine Dynamic AniList Live (Kolam ~1.000 Karakter)
+async function fetchAniListPage(pageNumber) {
+  const cacheKey = `anilist_page_v2_${pageNumber}`;
+  const cached = localStorage.getItem(cacheKey);
   if (cached) {
-    try { livePool = JSON.parse(cached); return; } catch (e) {}
+    try { return JSON.parse(cached); } catch (e) {}
   }
-  const query = `query { Page(page: 1, perPage: 50) { characters(sort: FAVOURITES_DESC) { name { full } image { large } media(sort: FAVOURITES_DESC, perPage: 1) { nodes { title { userPreferred } } } } } }`;
+
+  const query = `query ($page: Int) {
+    Page(page: $page, perPage: 25) {
+      characters(sort: FAVOURITES_DESC) {
+        name { full }
+        image { large }
+        media(sort: FAVOURITES_DESC, perPage: 1) {
+          nodes { title { userPreferred } }
+        }
+      }
+    }
+  }`;
+
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ query })
+      body: JSON.stringify({ query, variables: { page: pageNumber } })
     });
     const json = await res.json();
-    livePool = (json?.data?.Page?.characters || []).map(c => ({
+    const list = (json?.data?.Page?.characters || []).map(c => ({
       character_name: c.name.full,
       anime_name: c.media?.nodes?.[0]?.title?.userPreferred || 'Anime Series',
       url: c.image.large
     }));
-    if (livePool.length > 0) {
-      localStorage.setItem('anilist_pool_cache', JSON.stringify(livePool));
+    if (list.length > 0) {
+      localStorage.setItem(cacheKey, JSON.stringify(list));
+      return list;
     }
   } catch (err) {}
+  return [];
 }
 
 async function rollCard(targetRarity) {
-  if (!livePool || livePool.length === 0) await loadLivePool();
-  let candidates = livePool;
-  if (livePool.length >= 30) {
-    if (targetRarity === 'SSR') candidates = livePool.slice(0, 10);
-    else if (targetRarity === 'SR') candidates = livePool.slice(10, 25);
-    else candidates = livePool.slice(25);
+  let targetPage = 1;
+  if (targetRarity === 'SSR') {
+    targetPage = 1;
+  } else if (targetRarity === 'SR') {
+    targetPage = Math.floor(Math.random() * 5) + 2;
+  } else {
+    targetPage = Math.floor(Math.random() * 34) + 7;
   }
-  const chosen = candidates[Math.floor(Math.random() * candidates.length)] || {
+
+  let pool = await fetchAniListPage(targetPage);
+  if (!pool || pool.length === 0) {
+    pool = await fetchAniListPage(1);
+  }
+
+  const chosen = pool[Math.floor(Math.random() * pool.length)] || {
     character_name: 'Subaru Natsuki',
     anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
     url: 'https://s4.anilist.co/file/anilistcdn/character/large/b88573-mQ847hO5n9hA.png'
   };
+
   return { ...chosen, rarity: targetRarity, artist_name: chosen.anime_name };
 }
 
@@ -167,7 +189,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderUI();
     syncUserData();
   }
-  loadLivePool();
+
+  fetchAniListPage(1);
+
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   initTabs();
   initCountdown();
@@ -357,15 +381,14 @@ document.getElementById('kartuWrapper')?.addEventListener('click', () => {
   }
 });
 
-// 9. Galeri Koleksi (Deduplikasi Kartu Kembar Jadi 1 + Tampilkan Badge xCount)
+// 9. Galeri Koleksi (Deduplikasi Katalog Unik + Badge xCount)
 function renderGallery() {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
   if (!container || !emptyBox) return;
 
   container.innerHTML = '';
-  
-  // Kelompokkan kartu kembar berdasarkan nama karakter
+
   const uniqueMap = new Map();
   (currentUser?.koleksi || []).forEach((c, idx) => {
     const key = (c.character_name || '').toLowerCase();
