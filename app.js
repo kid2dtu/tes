@@ -224,6 +224,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initCardDetailModal();
   initGalleryControls();
   initShardExchange();
+  initGachaInfoModal();
 });
 
 // 4. Sinkronisasi Realtime
@@ -766,13 +767,10 @@ function openCardDetail(card) {
 
 async function downloadCardImage(url, name) {
   showToast('Menyiapkan download gambar...');
-  
-  // Deteksi ekstensi asli (apakah .gif atau .png)
   const rawExt = url.split('.').pop().split('?')[0].toLowerCase();
   const ext = ['gif', 'png', 'jpg', 'jpeg', 'webp'].includes(rawExt) ? rawExt : 'png';
   const filename = `${name.replace(/\s+/g, '_')}_gacha.${ext}`;
 
-  // Daftar proxy gambar untuk menembus CORS nekos.best
   const proxyList = [
     `https://images.weserv.nl/?url=${encodeURIComponent(url)}&default=${encodeURIComponent(url)}`,
     `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -787,9 +785,7 @@ async function downloadCardImage(url, name) {
         blob = await res.blob();
         if (blob && blob.size > 0) break;
       }
-    } catch (err) {
-      // Coba proxy berikutnya
-    }
+    } catch (err) {}
   }
 
   if (blob) {
@@ -810,7 +806,113 @@ async function downloadCardImage(url, name) {
   }
 }
 
-// 12. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
+// 12. Modal Rincian Rate & Drop List Karakter
+function initGachaInfoModal() {
+  const modal = document.getElementById('modalGachaInfo');
+  const btnBuka = document.getElementById('btnBukaInfoGacha');
+  const btnTutup = document.getElementById('btnCloseInfo');
+  const btnSubRate = document.getElementById('btnSubRate');
+  const btnSubDrop = document.getElementById('btnSubDrop');
+  const contentRate = document.getElementById('infoContentRate');
+  const contentDrop = document.getElementById('infoContentDrop');
+  const inputSearchDrop = document.getElementById('inputSearchDrop');
+  const modalBox = modal ? modal.querySelector('.modal-info-card') : null;
+
+  if (btnBuka) {
+    btnBuka.addEventListener('click', () => {
+      playSFX('click');
+      if (modal) modal.style.display = 'flex';
+      renderDropList();
+    });
+  }
+
+  if (btnTutup) {
+    btnTutup.addEventListener('click', () => {
+      playSFX('click');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
+
+  if (modalBox) {
+    modalBox.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  // Switch Sub-Tab
+  if (btnSubRate && btnSubDrop) {
+    btnSubRate.addEventListener('click', () => {
+      playSFX('click');
+      btnSubRate.classList.add('active');
+      btnSubDrop.classList.remove('active');
+      contentRate.classList.add('active');
+      contentDrop.classList.remove('active');
+    });
+
+    btnSubDrop.addEventListener('click', () => {
+      playSFX('click');
+      btnSubDrop.classList.add('active');
+      btnSubRate.classList.remove('active');
+      contentDrop.classList.add('active');
+      contentRate.classList.remove('active');
+      renderDropList(inputSearchDrop ? inputSearchDrop.value : '');
+    });
+  }
+
+  if (inputSearchDrop) {
+    inputSearchDrop.addEventListener('input', (e) => {
+      renderDropList(e.target.value);
+    });
+  }
+}
+
+function renderDropList(filterText = '') {
+  const container = document.getElementById('dropListContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+  const search = filterText.trim().toLowerCase();
+
+  const uniqueChars = [];
+  const seen = new Set();
+  ANIME_CHARACTER_DATABASE.forEach(item => {
+    if (!seen.has(item.char)) {
+      seen.add(item.char);
+      uniqueChars.push(item);
+    }
+  });
+
+  uniqueChars.sort((a, b) => a.char.localeCompare(b.char));
+
+  const filtered = uniqueChars.filter(item => {
+    if (!search) return true;
+    return item.char.toLowerCase().includes(search) || item.anime.toLowerCase().includes(search);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--text-muted); font-size: 11px;">Karakter tidak ditemukan.</div>`;
+    return;
+  }
+
+  filtered.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'drop-item';
+    el.innerHTML = `
+      <div>
+        <div class="drop-item-char">${item.char}</div>
+        <div class="drop-item-anime">Seri: ${item.anime}</div>
+      </div>
+      <span style="font-size: 10px; color: #818cf8; font-weight: 700;">Tersedia di Pool</span>
+    `;
+    container.appendChild(el);
+  });
+}
+
+// 13. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
 function initShardExchange() {
   const btnTukar = document.getElementById('btnTukarShard');
   if (!btnTukar) return;
@@ -845,7 +947,7 @@ function initShardExchange() {
   });
 }
 
-// 13. Navigasi Bawah & Logout
+// 14. Navigasi Bawah & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
