@@ -10,7 +10,7 @@ body {
   background-color: #0d0f18;
   color: #f1f5f9;
   min-height: 100vh;
-  padding-bottom: 80px;
+  padding-bottom: 84px;
 }
 
 .navbar {
@@ -46,6 +46,7 @@ body {
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
+/* Status Tiket */
 .ticket-status-card {
   display: flex;
   justify-content: space-between;
@@ -62,11 +63,28 @@ body {
   color: #38bdf8;
 }
 
+.gacha-sub-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0 4px;
+}
+
+.btn-info-link {
+  background: none;
+  border: none;
+  color: #f59e0b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* Pity Meter */
 .pity-container {
-  margin-top: 14px;
   background: #171a29;
   padding: 12px 14px;
   border-radius: 12px;
+  border: 1px solid #232738;
 }
 
 .pity-header {
@@ -92,6 +110,9 @@ body {
   transition: width 0.4s ease;
 }
 
+/* =========================================
+   DESAIN CARD SLEEVE & FLIP 3D (Fitur 2)
+   ========================================= */
 .card-stage {
   perspective: 1000px;
   display: flex;
@@ -112,7 +133,7 @@ body {
   transform-style: preserve-3d;
   transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.6);
 }
 
 .card.flipped .card-inner {
@@ -128,24 +149,89 @@ body {
   overflow: hidden;
 }
 
-.card-front {
-  background: linear-gradient(135deg, #1e1e38, #111124);
-  border: 2px dashed #4f46e5;
+/* Tampilan Card Sleeve Anime Tarot */
+.tarot-back {
+  background: radial-gradient(circle at center, #1b2038 0%, #0c0f1c 100%);
+  border: 2px solid #f59e0b;
+  position: relative;
+}
+
+.sleeve-border {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.015),
+    rgba(255, 255, 255, 0.015) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+}
+
+.sleeve-inner-pattern {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  font-weight: 700;
-  color: #a5b4fc;
+  justify-content: center;
+  text-align: center;
 }
 
-.card-placeholder-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 12px;
-  opacity: 0.85;
+.magic-circle {
+  font-size: 3.2rem;
+  color: #f59e0b;
+  text-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+  animation: pulseGlow 2.5s infinite ease-in-out;
 }
 
+.sleeve-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #f8fafc;
+  margin-top: 10px;
+}
+
+.sleeve-subtitle {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #38bdf8;
+  margin-top: 4px;
+}
+
+/* Kilap Hologram */
+.shimmer-sweep {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 60%
+  );
+  transform: rotate(25deg);
+  animation: sweep 4s infinite linear;
+}
+
+@keyframes sweep {
+  0% { transform: translateY(-80%) rotate(25deg); }
+  100% { transform: translateY(80%) rotate(25deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 24px rgba(245, 158, 11, 1); }
+}
+
+/* Sisi Depan Kartu */
 .card-back {
   background: #151824;
   transform: rotateY(180deg);
@@ -184,39 +270,93 @@ body {
 .rarity-badge.SR { background: #8b5cf6; }
 .rarity-badge.R { background: #3b82f6; }
 
-.btn-primary, .btn-gacha, .btn-secondary, .btn-danger {
-  width: 100%;
+/* Buttons */
+.btn-primary, .btn-gacha, .btn-secondary, .btn-danger, .btn-download {
   border: none;
   font-weight: 700;
   border-radius: 12px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
-.btn-primary { padding: 12px; background: #ff5e9a; color: white; }
-.btn-gacha { padding: 16px; background: linear-gradient(90deg, #ec4899, #8b5cf6); color: white; font-size: 1.1rem; }
+.btn-primary { width: 100%; padding: 12px; background: #ff5e9a; color: white; }
+.btn-gacha { width: 100%; padding: 16px; background: linear-gradient(90deg, #ec4899, #8b5cf6); color: white; font-size: 1.1rem; }
 .btn-secondary { padding: 8px 14px; background: #2563eb; color: white; width: auto; }
-.btn-danger { padding: 12px; background: #ef4444; color: white; margin-top: 16px; }
+.btn-danger { width: 100%; padding: 12px; background: #ef4444; color: white; margin-top: 16px; }
+.btn-download { width: 100%; padding: 12px; background: #10b981; color: white; font-size: 0.95rem; margin-top: 14px; }
 .btn-gacha:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.album-header {
+/* =========================================
+   ALBUM KOLEKSI: FILTER & SORT (Fitur 3)
+   ========================================= */
+.album-controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.filter-group { display: flex; gap: 8px; }
+.album-header-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.count-pill {
+  background: #1e2438;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #38bdf8;
+  border: 1px solid #334155;
+}
+
+.filter-group {
+  display: flex;
+  gap: 6px;
+}
+
 .btn-filter {
   flex: 1;
-  padding: 6px;
+  padding: 8px 4px;
   background: #1a1e30;
   border: 1px solid #2b324d;
   color: #94a3b8;
   border-radius: 8px;
+  font-size: 0.8rem;
   cursor: pointer;
 }
 
-.btn-filter.active { background: #38bdf8; color: #0f172a; font-weight: 700; }
+.btn-filter.active {
+  background: #38bdf8;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.sort-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.album-status-text {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.select-sort {
+  padding: 6px 10px;
+  background: #171a29;
+  border: 1px solid #2b324d;
+  color: #f1f5f9;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  outline: none;
+}
+
 .album-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -239,6 +379,7 @@ body {
   object-fit: cover;
 }
 
+/* Profil */
 .profile-card {
   text-align: center;
   padding: 16px;
@@ -262,6 +403,7 @@ body {
 }
 
 .stat-card span { display: block; font-size: 1.3rem; font-weight: 700; color: #38bdf8; }
+
 .shard-exchange-box, .notif-toggle-box {
   background: #171a29;
   padding: 14px;
@@ -273,6 +415,16 @@ body {
   margin-bottom: 12px;
 }
 
+.badge-notif-active {
+  background: #064e3b;
+  color: #34d399;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Navigasi Bawah */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -295,10 +447,11 @@ body {
 
 .nav-item.active { color: #ff5e9a; }
 
+/* Modals */
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.8);
+  background: rgba(0,0,0,0.85);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -310,37 +463,155 @@ body {
 .modal-box {
   background: #181c2e;
   width: 100%;
-  max-width: 360px;
-  padding: 24px;
+  max-width: 380px;
+  padding: 20px;
   border-radius: 16px;
-  text-align: center;
-}
-
-.modal-box input {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 8px;
-  background: #0f121d;
   border: 1px solid #2b324d;
-  color: white;
+  position: relative;
 }
 
-.card-detail-box img {
-  width: 100%;
-  height: 300px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin: 12px 0;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
 }
 
 .btn-close {
-  float: right;
   background: none;
   border: none;
-  font-size: 1.5rem;
-  color: white;
+  font-size: 1.6rem;
+  color: #94a3b8;
   cursor: pointer;
 }
 
-.error-msg { color: #ef4444; font-size: 0.85rem; margin-top: 8px; }
+/* =========================================
+   DETAIL MODAL UTUH & TIDAK KEPOTONG (Fitur 4)
+   ========================================= */
+.card-detail-img-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  max-height: 52vh;
+  background: #0d0f18;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #334155;
+}
+
+.card-detail-img-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Utuh, proporsional, dan tidak terpotong */
+}
+
+.card-detail-meta {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.card-detail-meta h3 {
+  font-size: 1.2rem;
+  margin-bottom: 2px;
+}
+
+.card-detail-meta p {
+  color: #38bdf8;
+  font-size: 0.88rem;
+}
+
+.artist-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Modal Rules & Pool Info */
+.rules-box {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.rules-body {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.rate-badge-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.rate-badge-item {
+  padding: 8px 6px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.rate-badge-item.ssr { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #fbbf24; }
+.rate-badge-item.sr { background: rgba(139, 92, 246, 0.15); border-color: #8b5cf6; color: #c4b5fd; }
+.rate-badge-item.r { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #93c5fd; }
+
+.badge-title { font-weight: 800; font-size: 0.95rem; display: block; }
+.badge-rate { font-weight: 700; font-size: 1.1rem; }
+.rate-badge-item small { display: block; font-size: 0.65rem; }
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rule-item {
+  display: flex;
+  gap: 10px;
+  background: #111422;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.rule-icon { font-size: 1.2rem; }
+.rule-item strong { display: block; color: #f1f5f9; margin-bottom: 2px; }
+.rule-item p { color: #94a3b8; line-height: 1.3; }
+
+.featured-pool-section h4 {
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.pool-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.ssr-pool-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.ssr-pool-thumb {
+  aspect-ratio: 2/3;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #f59e0b;
+}
+
+.ssr-pool-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.error-msg { color: #ef4444; font-size: 0.85rem; margin-top: 8px; text-align: center; }
