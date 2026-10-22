@@ -109,7 +109,6 @@ async function fetchRealImageByName(charName) {
   return null;
 }
 
-// Fungsi Auto-Repair seluruh koleksi yang rusak di database
 async function autoRepairCollection() {
   if (!currentUser || !Array.isArray(currentUser.koleksi)) return;
   let updated = false;
@@ -130,7 +129,6 @@ async function autoRepairCollection() {
   }
 }
 
-// Penyelamat jika kartu individual gagal load (langsung sembuh seketika)
 window.handleImageError = async function(imgElement, charName, cardIdx) {
   imgElement.onerror = null;
   const realUrl = await fetchRealImageByName(charName);
@@ -240,4 +238,361 @@ function initCountdown() {
     const m = String(Math.floor((diff / 60000) % 60)).padStart(2, '0');
     const s = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
     const el = document.getElementById('txtCountdown');
-    if (
+    if (el) el.innerText = `${j}:${m}:${s}`;
+  }, 1000);
+}
+
+function initSyncListener() {
+  syncChannel.onmessage = (e) => {
+    if (e.data?.type === 'TICKET_UPDATED' && currentUser?.username === e.data.targetUser) {
+      currentUser.tickets = e.data.newTicket;
+      localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+      renderUI();
+    }
+  };
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && currentUser && !isFlipping) syncUserData();
+  }, 6000);
+}
+
+// 7. Login & Sinkron Server
+document.getElementById('btnAuthSubmit')?.addEventListener('click', async () => {
+  playSFX('click');
+  const username = document.getElementById('authUsername').value.trim().toLowerCase();
+  const pin = document.getElementById('authPin').value.trim();
+  const errBox = document.getElementById('authError');
+
+  if (!username || pin.length !== 4) return errBox.innerText = 'Username wajib diisi & PIN 4 angka!';
+  errBox.innerText = '';
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', username, pin })
+    });
+    const result = await res.json();
+    if (result.success) {
+      currentUser = { username: result.username, pin, tickets: result.tickets, pity: 0, shards: 0, koleksi: result.koleksi || [] };
+      localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+      document.getElementById('modalAuth').style.display = 'none';
+      renderUI();
+      autoRepairCollection();
+      showToast('Berhasil masuk! 🎟️');
+    } else {
+      errBox.innerText = result.message || 'Login gagal';
+    }
+  } catch (err) {
+    errBox.innerText = 'Gagal terhubung database.';
+  }
+});
+
+async function syncUserData() {
+  if (!currentUser) return;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', username: currentUser.username, pin: currentUser.pin })
+    });
+    const result = await res.json();
+    if (result.success) {
+      currentUser.tickets = result.tickets;
+      if (result.koleksi && result.koleksi.length > (currentUser.koleksi?.length || 0)) {
+        currentUser.koleksi = result.koleksi;
+      }
+      localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+      renderUI();
+      autoRepairCollection();
+    }
+  } catch (e) {}
+}
+
+function renderUI() {
+  if (!currentUser) return;
+  document.getElementById('headerUsername').innerText = `@${currentUser.username}`;
+  document.getElementById('profileUsername').innerText = `@${currentUser.username}`;
+  document.getElementById('txtTiket').innerText = currentUser.tickets;
+  const pity = currentUser.pity || 0;
+  document.getElementById('txtPityCount').innerText = `${pity} / 30`;
+  document.getElementById('pityBarFill').style.width = `${Math.min(100, (pity / 30) * 100)}%`;
+
+  const cards = currentUser.koleksi || [];
+  const total = cards.length;
+  document.getElementById('statTotalTarik').innerText = total;
+  document.getElementById('statKarakterUnik').innerText = new Set(cards.map(c => c.character_name)).size;
+  document.getElementById('statSSRRate').innerText = total > 0 ? `${((cards.filter(c=>c.rarity==='SSR').length / total) * 100).toFixed(1)}%` : '0%';
+  document.getElementById('statSRRate').innerText = total > 0 ? `${((cards.filter(c=>c.rarity==='SR').length / total) * 100).toFixed(1)}%` : '0%';
+  document.getElementById('txtShardCount').innerText = currentUser.shards || 0;
+  renderGallery();
+}
+
+// 8. Tarik Gacha
+document.getElementById('btnTarikGacha')?.addEventListener('click', async () => {
+  if (isFlipping) return;
+  if (!currentUser || currentUser.tickets <= 0) return showToast('Tiket habis! Reset jam 00:00 WIB.');
+
+  playSFX('click');
+  const cardWrapper = document.getElementById('kartuWrapper');
+  const cardFront = document.getElementById('kartuDepan');
+  const cardImg = document.getElementById('kartuImg');
+
+  isFlipping = true;
+  document.getElementById('btnTarikGacha').disabled = true;
+  cardWrapper.classList.remove('flipped');
+  await new Promise(r => setTimeout(r, 350));
+
+  let targetRarity = 'R';
+  if ((currentUser.pity || 0) >= 29) {
+    targetRarity = 'SSR';
+    showToast('🌟 JAMINAN SSR TERCAPAI! 🌟');
+  } else {
+    const roll = Math.random() * 100;
+    if (roll <= 5) targetRarity = 'SSR';
+    else if (roll <= 30) targetRarity = 'SR';
+  }
+
+  const chosen = await rollCard(targetRarity);
+  const now = new Date();
+  const jam = String(now.getHours()).padStart(2, '0');
+  const mnt = String(now.getMinutes()).padStart(2, '0');
+
+  const newCard = {
+    ...chosen,
+    date: `${now.toLocaleDateString('id-ID')} ${jam}:${mnt} WIB`,
+    timestamp: now.getTime()
+  };
+
+  cardFront.className = `card-face card-front rarity-${newCard.rarity}`;
+  document.getElementById('kartuRarity').innerText = newCard.rarity;
+  document.getElementById('kartuAnime').innerText = newCard.character_name;
+  document.getElementById('kartuArtist').innerText = newCard.anime_name;
+
+  if (currentUser.koleksi.some(c => c.character_name.toLowerCase() === newCard.character_name.toLowerCase())) {
+    currentUser.shards = (currentUser.shards || 0) + 1;
+    setTimeout(() => showToast(`Kartu kembar! +1 Star Shard ⭐`), 1200);
+  }
+
+  currentUser.tickets = Math.max(0, currentUser.tickets - 1);
+  currentUser.pity = newCard.rarity === 'SSR' ? 0 : (currentUser.pity || 0) + 1;
+  currentUser.koleksi.push(newCard);
+  localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+  renderUI();
+
+  let finishDone = false;
+  const finish = () => {
+    if (finishDone) return;
+    finishDone = true;
+    cardWrapper.classList.add('flipped');
+    playSFX('flip');
+    isFlipping = false;
+    document.getElementById('btnTarikGacha').disabled = false;
+    if (newCard.rarity === 'SSR') {
+      setTimeout(() => { playSFX('ssr'); triggerSSRConfetti(); }, 300);
+    }
+  };
+
+  cardImg.onload = finish;
+  cardImg.onerror = finish;
+  setTimeout(() => { if (isFlipping) finish(); }, 2000);
+  cardImg.src = newCard.url;
+
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'gacha', username: currentUser.username, pin: currentUser.pin, kartu: newCard })
+  }).catch(() => {});
+});
+
+document.getElementById('kartuWrapper')?.addEventListener('click', () => {
+  if (document.getElementById('kartuImg')?.src) {
+    playSFX('flip');
+    document.getElementById('kartuWrapper').classList.toggle('flipped');
+  }
+});
+
+// 9. Galeri Koleksi
+function renderGallery() {
+  const container = document.getElementById('gridGaleri');
+  const emptyBox = document.getElementById('galeriKosong');
+  if (!container || !emptyBox) return;
+
+  container.innerHTML = '';
+  const cards = (currentUser?.koleksi || []).map((c, idx) => ({ ...c, _idx: idx }));
+
+  let filtered = cards.filter(c => {
+    const matchRarity = currentFilter === 'all' || c.rarity === currentFilter;
+    const target = `${c.character_name} ${c.anime_name}`.toLowerCase();
+    return matchRarity && (!currentSearch || target.includes(currentSearch));
+  });
+
+  document.getElementById('txtKoleksiCount').innerText = `${filtered.length} Kartu`;
+  emptyBox.style.display = filtered.length === 0 ? 'block' : 'none';
+
+  const rank = { SSR: 3, SR: 2, R: 1 };
+  filtered.sort((a, b) => {
+    if (currentSort === 'name') return (a.character_name || '').localeCompare(b.character_name || '');
+    if (currentSort === 'rarity') return (rank[b.rarity] || 0) - (rank[a.rarity] || 0);
+    return (b.timestamp || b._idx) - (a.timestamp || a._idx);
+  });
+
+  filtered.forEach(c => {
+    const key = `${c.url}_${c._idx}`;
+    const isNew = !seenCards.has(key);
+    const safeName = (c.character_name || '').replace(/'/g, "\\'");
+    const el = document.createElement('div');
+    el.className = `mini-card rarity-${c.rarity}`;
+    el.innerHTML = `
+      ${isNew ? '<span class="badge-new">NEW</span>' : ''}
+      <img src="${c.url}" loading="lazy" referrerpolicy="no-referrer" alt="${c.character_name}" onerror="window.handleImageError(this, '${safeName}', ${c._idx})">
+      <div class="mini-card-info">
+        <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
+        <h4>${c.character_name}</h4>
+      </div>
+    `;
+    el.addEventListener('click', () => {
+      playSFX('click');
+      if (isNew) {
+        seenCards.add(key);
+        localStorage.setItem('gacha_seen_cards', JSON.stringify(Array.from(seenCards)));
+        el.querySelector('.badge-new')?.remove();
+      }
+      openCardDetail(c);
+    });
+    container.appendChild(el);
+  });
+}
+
+function initGalleryControls() {
+  document.getElementById('inputSearchGaleri')?.addEventListener('input', (e) => {
+    currentSearch = e.target.value.trim().toLowerCase();
+    renderGallery();
+  });
+  document.getElementById('sortSelect')?.addEventListener('change', (e) => {
+    playSFX('click');
+    currentSort = e.target.value;
+    renderGallery();
+  });
+  document.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      playSFX('click');
+      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderGallery();
+    });
+  });
+}
+
+// 10. Detail Modal & Shards
+function initCardDetailModal() {
+  const modal = document.getElementById('modalCardDetail');
+  document.getElementById('btnCloseDetail')?.addEventListener('click', () => {
+    playSFX('click'); modal.style.display = 'none';
+  });
+  document.getElementById('btnDownloadCard')?.addEventListener('click', () => {
+    if (!activeModalCard) return;
+    playSFX('click');
+    const a = document.createElement('a');
+    a.href = activeModalCard.url;
+    a.download = `${activeModalCard.character_name}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    showToast('Download dimulai! 💾');
+  });
+}
+
+function openCardDetail(card) {
+  activeModalCard = card;
+  const modal = document.getElementById('modalCardDetail');
+  const box = modal?.querySelector('.modal-detail-card');
+  if (!modal || !box) return;
+
+  box.className = `modal-card modal-detail-card rarity-${card.rarity}`;
+  document.getElementById('detailRarity').innerText = card.rarity;
+  document.getElementById('detailRarity').style.color = `var(--rarity-${card.rarity.toLowerCase()})`;
+  document.getElementById('detailImg').src = card.url;
+  document.getElementById('detailCharacter').innerText = card.character_name;
+  document.getElementById('detailAnime').innerText = card.anime_name;
+  document.getElementById('detailArtist').innerText = card.artist_name || 'Official Art';
+  document.getElementById('detailDate').innerText = card.date;
+  modal.style.display = 'flex';
+}
+
+function initShardExchange() {
+  document.getElementById('btnTukarShard')?.addEventListener('click', async () => {
+    if (!currentUser) return;
+    if ((currentUser.shards || 0) < 5) return showToast('Butuh minimal 5 Star Shards ⭐');
+    playSFX('ssr');
+    currentUser.shards -= 5;
+    currentUser.tickets += 1;
+    localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+    renderUI();
+    showToast('Sukses tukar 5 Shard ➔ +1 Tiket! 🎟️');
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'admin_set_ticket', adminPin: '9999', targetUser: currentUser.username, newTicket: currentUser.tickets })
+    }).catch(() => {});
+  });
+}
+
+function initGachaInfoModal() {
+  const modal = document.getElementById('modalGachaInfo');
+  document.getElementById('btnBukaInfoGacha')?.addEventListener('click', () => {
+    playSFX('click'); modal.style.display = 'flex';
+  });
+  document.getElementById('btnCloseInfo')?.addEventListener('click', () => {
+    playSFX('click'); modal.style.display = 'none';
+  });
+  document.getElementById('btnSubRate')?.addEventListener('click', () => {
+    playSFX('click');
+    document.getElementById('btnSubRate').classList.add('active');
+    document.getElementById('btnSubDrop').classList.remove('active');
+    document.getElementById('infoContentRate').classList.add('active');
+    document.getElementById('infoContentDrop').classList.remove('active');
+  });
+  document.getElementById('btnSubDrop')?.addEventListener('click', () => {
+    playSFX('click');
+    document.getElementById('btnSubDrop').classList.add('active');
+    document.getElementById('btnSubRate').classList.remove('active');
+    document.getElementById('infoContentDrop').classList.add('active');
+    document.getElementById('infoContentRate').classList.remove('active');
+  });
+}
+
+// 11. Navigasi & Utility
+function initTabs() {
+  const navItems = document.querySelectorAll('.nav-item');
+  const panes = document.querySelectorAll('.tab-pane');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      playSFX('click');
+      const target = item.dataset.target;
+      navItems.forEach(n => n.classList.remove('active'));
+      panes.forEach(p => p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById(target)?.classList.add('active');
+      if (target === 'tabGaleri') renderGallery();
+    });
+  });
+
+  document.getElementById('btnBukaAkun')?.addEventListener('click', () => {
+    playSFX('click');
+    navItems.forEach(n => n.classList.remove('active'));
+    panes.forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-target="tabAkun"]')?.classList.add('active');
+    document.getElementById('tabAkun')?.classList.add('active');
+  });
+
+  document.getElementById('btnLogout')?.addEventListener('click', () => {
+    playSFX('click');
+    localStorage.removeItem('gacha_user');
+    currentUser = null;
+    location.reload();
+  });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  if (!toast) return;
+  toast.innerText = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
