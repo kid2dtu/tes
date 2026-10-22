@@ -1,16 +1,148 @@
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
 
 let currentUser = JSON.parse(localStorage.getItem('gacha_user') || 'null');
+let seenCards = new Set(JSON.parse(localStorage.getItem('gacha_seen_cards') || '[]'));
+let activeModalCard = null;
 let deferredPrompt = null;
 let isFlipping = false;
 let currentFilter = 'all';
 let currentSort = 'date';
+let currentSearch = '';
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
-// Database Karakter Super Lengkap (150+ Karakter)
+// 1. Audio Synthesizer (SFX Bawaan Browser)
+let audioCtx = null;
+function getAudioContext() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playSFX(type) {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    if (type === 'click') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === 'flip') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else if (type === 'sr') {
+      const notes = [659.25, 783.99, 987.77, 1318.51];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.3);
+      });
+    } else if (type === 'ssr') {
+      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+        gain.gain.setValueAtTime(0.3, now + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.07 + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.07);
+        osc.stop(now + idx * 0.07 + 0.5);
+      });
+    }
+  } catch (e) {
+    console.warn('Audio belum aktif:', e);
+  }
+}
+
+// 2. Partikel Confetti Canvas SSR
+function triggerSSRConfetti() {
+  const canvas = document.getElementById('fxCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = [];
+  const colors = ['#ec4899', '#8b5cf6', '#38bdf8', '#fbbf24', '#ffffff', '#f43f5e'];
+
+  for (let i = 0; i < 90; i++) {
+    particles.push({
+      x: canvas.width / 2,
+      y: canvas.height * 0.45,
+      r: Math.random() * 6 + 3,
+      dx: (Math.random() - 0.5) * 14,
+      dy: (Math.random() - 0.7) * 16,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1,
+      decay: Math.random() * 0.015 + 0.01
+    });
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let active = false;
+
+    particles.forEach(p => {
+      if (p.alpha > 0) {
+        active = true;
+        p.x += p.dx;
+        p.y += p.dy;
+        p.dy += 0.35;
+        p.alpha -= p.decay;
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    });
+
+    if (active) {
+      requestAnimationFrame(render);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+  render();
+}
+
+// 3. Database Karakter Anime (150+ Karakter)
 const ANIME_CHARACTER_DATABASE = [
-  // --- RE:ZERO & KONOSUBA ---
   { char: 'Rem', anime: 'Re:Zero' },
   { char: 'Ram', anime: 'Re:Zero' },
   { char: 'Emilia', anime: 'Re:Zero' },
@@ -21,8 +153,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Darkness', anime: 'KonoSuba' },
   { char: 'Yunyun', anime: 'KonoSuba' },
   { char: 'Wiz', anime: 'KonoSuba' },
-
-  // --- GENSHIN IMPACT ---
   { char: 'Raiden Shogun', anime: 'Genshin Impact' },
   { char: 'Hu Tao', anime: 'Genshin Impact' },
   { char: 'Furina', anime: 'Genshin Impact' },
@@ -38,8 +168,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Nilou', anime: 'Genshin Impact' },
   { char: 'Eula', anime: 'Genshin Impact' },
   { char: 'Yae Miko', anime: 'Genshin Impact' },
-
-  // --- HONKAI: STAR RAIL ---
   { char: 'Firefly', anime: 'Honkai: Star Rail' },
   { char: 'Kafka', anime: 'Honkai: Star Rail' },
   { char: 'Sparkle', anime: 'Honkai: Star Rail' },
@@ -54,8 +182,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Tingyun', anime: 'Honkai: Star Rail' },
   { char: 'Fu Xuan', anime: 'Honkai: Star Rail' },
   { char: 'Seele', anime: 'Honkai: Star Rail' },
-
-  // --- BLUE ARCHIVE ---
   { char: 'Shiroko', anime: 'Blue Archive' },
   { char: 'Hina', anime: 'Blue Archive' },
   { char: 'Yuuka', anime: 'Blue Archive' },
@@ -68,8 +194,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Hanako', anime: 'Blue Archive' },
   { char: 'Koharu', anime: 'Blue Archive' },
   { char: 'Azusa', anime: 'Blue Archive' },
-
-  // --- FATE SERIES ---
   { char: 'Saber (Artoria)', anime: 'Fate/stay night' },
   { char: 'Rin Tohsaka', anime: 'Fate/stay night' },
   { char: 'Illyasviel', anime: 'Fate/stay night' },
@@ -82,8 +206,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Ereshkigal', anime: 'Fate/Grand Order' },
   { char: 'Okita Souji', anime: 'Fate/Grand Order' },
   { char: 'Castoria', anime: 'Fate/Grand Order' },
-
-  // --- BOCCHI THE ROCK! & LYCORIS RECOIL ---
   { char: 'Hitori Gotoh (Bocchi)', anime: 'Bocchi the Rock!' },
   { char: 'Kita Ikuyo', anime: 'Bocchi the Rock!' },
   { char: 'Nijika Ijichi', anime: 'Bocchi the Rock!' },
@@ -91,14 +213,10 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Kikuri Hiroi', anime: 'Bocchi the Rock!' },
   { char: 'Chisato Nishikigi', anime: 'Lycoris Recoil' },
   { char: 'Takina Inoue', anime: 'Lycoris Recoil' },
-
-  // --- FRIEREN & DUNGEON MESHI ---
   { char: 'Frieren', anime: 'Sousou no Frieren' },
   { char: 'Fern', anime: 'Sousou no Frieren' },
   { char: 'Ubel', anime: 'Sousou no Frieren' },
   { char: 'Marcille Donato', anime: 'Dungeon Meshi' },
-
-  // --- OSHI NO KO & KAGUYA-SAMA ---
   { char: 'Ai Hoshino', anime: 'Oshi no Ko' },
   { char: 'Ruby Hoshino', anime: 'Oshi no Ko' },
   { char: 'Kana Arima', anime: 'Oshi no Ko' },
@@ -108,16 +226,12 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Chika Fujiwara', anime: 'Kaguya-sama: Love is War' },
   { char: 'Miko Iino', anime: 'Kaguya-sama: Love is War' },
   { char: 'Ai Hayasaka', anime: 'Kaguya-sama: Love is War' },
-
-  // --- SPY X FAMILY & CHAINSAW MAN ---
   { char: 'Yor Forger', anime: 'Spy × Family' },
   { char: 'Anya Forger', anime: 'Spy × Family' },
   { char: 'Makima', anime: 'Chainsaw Man' },
   { char: 'Power', anime: 'Chainsaw Man' },
   { char: 'Reze', anime: 'Chainsaw Man' },
   { char: 'Kobeni', anime: 'Chainsaw Man' },
-
-  // --- SWORD ART ONLINE & DARLING IN THE FRANXX ---
   { char: 'Asuna Yuuki', anime: 'Sword Art Online' },
   { char: 'Sinon (Asada Shino)', anime: 'Sword Art Online' },
   { char: 'Alice Synthesis Thirty', anime: 'Sword Art Online' },
@@ -126,8 +240,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Lisbeth', anime: 'Sword Art Online' },
   { char: 'Zero Two', anime: 'Darling in the Franxx' },
   { char: 'Ichigo', anime: 'Darling in the Franxx' },
-
-  // --- VTUBER / HOLOLIVE ---
   { char: 'Shirakami Fubuki', anime: 'Hololive' },
   { char: 'Usada Pekora', anime: 'Hololive' },
   { char: 'Houshou Marine', anime: 'Hololive' },
@@ -137,8 +249,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Gawr Gura', anime: 'Hololive' },
   { char: 'Mori Calliope', anime: 'Hololive' },
   { char: 'Minato Aqua', anime: 'Hololive' },
-
-  // --- ROMCOM & SLICE OF LIFE HITS ---
   { char: 'Marin Kitagawa', anime: 'My Dress-Up Darling' },
   { char: 'Kurumi Tokisaki', anime: 'Date A Live' },
   { char: 'Tohka Yatogami', anime: 'Date A Live' },
@@ -158,8 +268,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Itsuki Nakano', anime: 'The Quintessential Quintuplets' },
   { char: 'Yotsuba Nakano', anime: 'The Quintessential Quintuplets' },
   { char: 'Ichika Nakano', anime: 'The Quintessential Quintuplets' },
-
-  // --- ISEKAI & FANTASY ---
   { char: 'Roxy Migurdia', anime: 'Mushoku Tensei' },
   { char: 'Sylphiette', anime: 'Mushoku Tensei' },
   { char: 'Eris Boreas Greyrat', anime: 'Mushoku Tensei' },
@@ -176,8 +284,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Milim Nava', anime: 'That Time I Got Reincarnated as a Slime' },
   { char: 'Albedo', anime: 'Overlord' },
   { char: 'Shalltear Bloodfallen', anime: 'Overlord' },
-
-  // --- SHOUNEN & ACTION ---
   { char: 'Nezuko Kamado', anime: 'Demon Slayer' },
   { char: 'Shinobu Kocho', anime: 'Demon Slayer' },
   { char: 'Mitsuri Kanroji', anime: 'Demon Slayer' },
@@ -189,8 +295,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Toga Himiko', anime: 'My Hero Academia' },
   { char: 'Mikasa Ackerman', anime: 'Attack on Titan' },
   { char: 'Historia Reiss', anime: 'Attack on Titan' },
-
-  // --- KLASIK / LEGENDARIS & VOCALOID ---
   { char: 'Hatsune Miku', anime: 'Vocaloid' },
   { char: 'Kagamine Rin', anime: 'Vocaloid' },
   { char: 'Megurine Luka', anime: 'Vocaloid' },
@@ -227,6 +331,17 @@ function resolveCardIdentity(card) {
   return ANIME_CHARACTER_DATABASE[Math.abs(hash) % ANIME_CHARACTER_DATABASE.length];
 }
 
+// 4. Hitung Pity 30 SSR
+function getPityCount() {
+  if (!currentUser || !currentUser.koleksi || currentUser.koleksi.length === 0) return 0;
+  let count = 0;
+  for (let i = currentUser.koleksi.length - 1; i >= 0; i--) {
+    if (currentUser.koleksi[i].rarity === 'SSR') break;
+    count++;
+  }
+  return count;
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const modalAuth = document.getElementById('modalAuth');
   if (!currentUser) {
@@ -242,10 +357,11 @@ window.addEventListener('DOMContentLoaded', () => {
   initCountdown();
   initSyncListener();
   initCardDetailModal();
-  initSortListener();
+  initGalleryControls();
+  initShardExchange();
 });
 
-// 1. Sinkronisasi Realtime Antar-Perangkat
+// 5. Sinkronisasi Realtime Antar-Perangkat
 function initSyncListener() {
   syncChannel.onmessage = (event) => {
     if (event.data && event.data.type === 'TICKET_UPDATED') {
@@ -277,7 +393,7 @@ function initSyncListener() {
   }, 5000);
 }
 
-// 2. Inisialisasi PWA & Notifikasi
+// 6. Inisialisasi PWA & Notifikasi
 function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
@@ -293,6 +409,7 @@ function initPWA() {
   const btnInstall = document.getElementById('btnInstallPwa');
   if (btnInstall) {
     btnInstall.addEventListener('click', async () => {
+      playSFX('click');
       if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
@@ -310,6 +427,7 @@ function initPWA() {
   const btnNotif = document.getElementById('btnIzinNotif');
   if (btnNotif) {
     btnNotif.addEventListener('click', async () => {
+      playSFX('click');
       await requestNotificationDirect();
     });
   }
@@ -341,7 +459,7 @@ function fireTicketNotification(title, body) {
   }
 }
 
-// 3. Hitung Mundur Reset 00:00 WIB
+// 7. Hitung Mundur Reset 00:00 WIB
 function initCountdown() {
   let hasTriggeredMidnight = false;
 
@@ -370,10 +488,11 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// 4. Autentikasi Akun
+// 8. Autentikasi Akun
 const btnAuth = document.getElementById('btnAuthSubmit');
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
+    playSFX('click');
     const username = document.getElementById('authUsername').value.trim().toLowerCase();
     const pin = document.getElementById('authPin').value.trim();
     const errBox = document.getElementById('authError');
@@ -401,6 +520,7 @@ if (btnAuth) {
           username: result.username,
           pin: pin,
           tickets: result.tickets,
+          shards: currentUser?.shards || 0,
           koleksi: result.koleksi || []
         };
         lastKnownTickets = result.tickets;
@@ -420,7 +540,7 @@ if (btnAuth) {
   });
 }
 
-// 5. Sinkronisasi Data & Sensor Reset Tiket
+// 9. Sinkronisasi Data
 async function syncUserData() {
   if (!currentUser) return;
   try {
@@ -453,10 +573,45 @@ function renderUI() {
   if (headerUser) headerUser.innerText = `@${currentUser.username}`;
   if (profileUser) profileUser.innerText = `@${currentUser.username}`;
   if (txtTiket) txtTiket.innerText = currentUser.tickets;
-  renderGallery(currentFilter);
+
+  // Pity Bar
+  const currentPity = getPityCount();
+  const txtPity = document.getElementById('txtPityCount');
+  const barFill = document.getElementById('pityBarFill');
+  if (txtPity) txtPity.innerText = `${currentPity} / 30`;
+  if (barFill) barFill.style.width = `${Math.min(100, (currentPity / 30) * 100)}%`;
+
+  // Statistik & Star Shard
+  renderStatsAndShards();
+  renderGallery();
 }
 
-// 6. Tarik Gacha
+function renderStatsAndShards() {
+  if (!currentUser) return;
+  const cards = currentUser.koleksi || [];
+  const totalTarik = cards.length;
+  
+  const uniqueChars = new Set(cards.map(c => resolveCardIdentity(c).char)).size;
+  const ssrCount = cards.filter(c => c.rarity === 'SSR').length;
+  const srCount = cards.filter(c => c.rarity === 'SR').length;
+
+  const ssrRate = totalTarik > 0 ? ((ssrCount / totalTarik) * 100).toFixed(1) : 0;
+  const srRate = totalTarik > 0 ? ((srCount / totalTarik) * 100).toFixed(1) : 0;
+
+  const elTotal = document.getElementById('statTotalTarik');
+  const elUnik = document.getElementById('statKarakterUnik');
+  const elSSR = document.getElementById('statSSRRate');
+  const elSR = document.getElementById('statSRRate');
+  const elShard = document.getElementById('txtShardCount');
+
+  if (elTotal) elTotal.innerText = totalTarik;
+  if (elUnik) elUnik.innerText = `${uniqueChars}/150`;
+  if (elSSR) elSSR.innerText = `${ssrRate}%`;
+  if (elSR) elSR.innerText = `${srRate}%`;
+  if (elShard) elShard.innerText = currentUser.shards || 0;
+}
+
+// 10. Tarik Gacha + Logika Pity 30, SFX, Confetti & Daur Ulang Kartu
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -464,6 +619,8 @@ if (btnGacha) {
     if (!currentUser || currentUser.tickets <= 0) {
       return showToast('Tiket harian habis! Balik lagi besok jam 00:00 WIB.');
     }
+
+    playSFX('click');
 
     const cardWrapper = document.getElementById('kartuWrapper');
     const cardFront = document.getElementById('kartuDepan');
@@ -475,19 +632,26 @@ if (btnGacha) {
     await new Promise(r => setTimeout(r, 350));
     showToast('Memanggil kartu anime...');
 
-    const roll = Math.random() * 100;
+    const pityNow = getPityCount();
     let rarity = 'R';
     let endpoint = 'neko';
 
-    if (roll <= 5) {
+    if (pityNow >= 29) {
       rarity = 'SSR';
       endpoint = 'smug';
-    } else if (roll <= 30) {
-      rarity = 'SR';
-      endpoint = 'kitsune';
+      showToast('🌟 PITY 30 TERCAPAI: JAMINAN SSR! 🌟');
     } else {
-      rarity = 'R';
-      endpoint = 'waifu';
+      const roll = Math.random() * 100;
+      if (roll <= 5) {
+        rarity = 'SSR';
+        endpoint = 'smug';
+      } else if (roll <= 30) {
+        rarity = 'SR';
+        endpoint = 'kitsune';
+      } else {
+        rarity = 'R';
+        endpoint = 'waifu';
+      }
     }
 
     try {
@@ -520,6 +684,17 @@ if (btnGacha) {
       document.getElementById('kartuAnime').innerText = newCard.character_name;
       document.getElementById('kartuArtist').innerText = `Artis: ${newCard.artist_name}`;
 
+      // Deteksi Kartu Duplikat (Daur Ulang Star Shard)
+      const isDuplicate = currentUser.koleksi.some(
+        c => resolveCardIdentity(c).char === charName && c.rarity === rarity
+      );
+      if (isDuplicate) {
+        currentUser.shards = (currentUser.shards || 0) + 1;
+        setTimeout(() => {
+          showToast(`Kartu kembar! Kamu dapat +1 Star Shard ⭐ (Total: ${currentUser.shards})`);
+        }, 1200);
+      }
+
       currentUser.tickets = Math.max(0, currentUser.tickets - 1);
       lastKnownTickets = currentUser.tickets;
       
@@ -527,14 +702,29 @@ if (btnGacha) {
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       document.getElementById('txtTiket').innerText = currentUser.tickets;
 
+      // Update Tampilan Bar Pity
+      const updatedPity = getPityCount();
+      const txtPity = document.getElementById('txtPityCount');
+      const barFill = document.getElementById('pityBarFill');
+      if (txtPity) txtPity.innerText = `${updatedPity} / 30`;
+      if (barFill) barFill.style.width = `${Math.min(100, (updatedPity / 30) * 100)}%`;
+
+      renderStatsAndShards();
+
       document.getElementById('kartuImg').onload = () => {
         cardWrapper.classList.add('flipped');
+        playSFX('flip');
         isFlipping = false;
         btnGacha.disabled = false;
 
         if (rarity === 'SSR') {
+          setTimeout(() => {
+            playSFX('ssr');
+            triggerSSRConfetti();
+          }, 300);
           fireTicketNotification('✨ DAPAT KARTU SSR! ✨', `Luar biasa! Kamu baru saja mendapatkan ${newCard.character_name} (${newCard.anime_name}) dengan kelangkaan SSR!`);
         } else if (rarity === 'SR') {
+          setTimeout(() => playSFX('sr'), 300);
           fireTicketNotification('🌟 DAPAT KARTU SR! 🌟', `Keren! Kamu berhasil mendapatkan ${newCard.character_name} (${newCard.anime_name}) dengan kelangkaan SR!`);
         }
       };
@@ -562,14 +752,14 @@ if (cardWrapper) {
   cardWrapper.addEventListener('click', () => {
     const img = document.getElementById('kartuImg');
     if (img && img.src) {
+      playSFX('flip');
       cardWrapper.classList.toggle('flipped');
     }
   });
 }
 
-// 7. Album Galeri Koleksi (Terbaru Selalu Paling Atas)
-function renderGallery(filter = 'all') {
-  currentFilter = filter;
+// 11. Album Galeri Koleksi (Pencarian, Filter, Sortir & NEW Badge)
+function renderGallery() {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
   const countBadge = document.getElementById('txtKoleksiCount');
@@ -581,7 +771,14 @@ function renderGallery(filter = 'all') {
     ? currentUser.koleksi.map((c, idx) => ({ ...c, _origIdx: idx })) 
     : [];
 
-  let filtered = filter === 'all' ? [...cards] : cards.filter(c => c.rarity === filter);
+  // Filter Rarity & Pencarian
+  let filtered = cards.filter(c => {
+    const matchRarity = (currentFilter === 'all') || (c.rarity === currentFilter);
+    const identity = resolveCardIdentity(c);
+    const searchTarget = `${identity.char} ${identity.anime}`.toLowerCase();
+    const matchSearch = !currentSearch || searchTarget.includes(currentSearch);
+    return matchRarity && matchSearch;
+  });
 
   if (countBadge) {
     countBadge.innerText = `${filtered.length} Kartu`;
@@ -593,6 +790,7 @@ function renderGallery(filter = 'all') {
   }
   emptyBox.style.display = 'none';
 
+  // Sortir
   const rarityRank = { 'SSR': 3, 'SR': 2, 'R': 1 };
   filtered.sort((a, b) => {
     if (currentSort === 'name') {
@@ -602,14 +800,10 @@ function renderGallery(filter = 'all') {
     } else if (currentSort === 'rarity') {
       const rankDiff = (rarityRank[b.rarity] || 0) - (rarityRank[a.rarity] || 0);
       if (rankDiff !== 0) return rankDiff;
-      if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) {
-        return b.timestamp - a.timestamp;
-      }
+      if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
       return b._origIdx - a._origIdx;
     } else {
-      if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) {
-        return b.timestamp - a.timestamp;
-      }
+      if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
       return b._origIdx - a._origIdx;
     }
   });
@@ -617,10 +811,13 @@ function renderGallery(filter = 'all') {
   filtered.forEach(c => {
     const identity = resolveCardIdentity(c);
     const charName = identity.char;
+    const cardKey = `${c.url}_${c._origIdx}`;
+    const isNew = !seenCards.has(cardKey);
 
     const el = document.createElement('div');
     el.className = `mini-card rarity-${c.rarity}`;
     el.innerHTML = `
+      ${isNew ? '<span class="badge-new">NEW</span>' : ''}
       <img src="${c.url}" loading="lazy" alt="${charName}">
       <div class="mini-card-info">
         <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
@@ -629,6 +826,15 @@ function renderGallery(filter = 'all') {
     `;
 
     el.addEventListener('click', () => {
+      playSFX('click');
+      // Hilangkan badge NEW pas diklik
+      if (isNew) {
+        seenCards.add(cardKey);
+        localStorage.setItem('gacha_seen_cards', JSON.stringify(Array.from(seenCards)));
+        const b = el.querySelector('.badge-new');
+        if (b) b.remove();
+      }
+
       openCardDetail({
         url: c.url,
         rarity: c.rarity,
@@ -643,25 +849,45 @@ function renderGallery(filter = 'all') {
   });
 }
 
-// 8. Event Listener Pengurutan Dropdown
-function initSortListener() {
+function initGalleryControls() {
+  const searchInput = document.getElementById('inputSearchGaleri');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentSearch = e.target.value.trim().toLowerCase();
+      renderGallery();
+    });
+  }
+
   const sortSelect = document.getElementById('sortSelect');
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
+      playSFX('click');
       currentSort = e.target.value;
-      renderGallery(currentFilter);
+      renderGallery();
     });
   }
+
+  document.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      playSFX('click');
+      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderGallery();
+    });
+  });
 }
 
-// 9. Logika Modal Pratinjau Penuh Kartu
+// 12. Modal Pratinjau Penuh & Simpan Gambar
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
+  const btnDownload = document.getElementById('btnDownloadCard');
   const modalBox = modal ? modal.querySelector('.modal-detail-card') : null;
 
   if (btnClose) {
     btnClose.addEventListener('click', () => {
+      playSFX('click');
       modal.style.display = 'none';
     });
   }
@@ -677,9 +903,18 @@ function initCardDetailModal() {
       e.stopPropagation();
     });
   }
+
+  if (btnDownload) {
+    btnDownload.addEventListener('click', () => {
+      if (!activeModalCard) return;
+      playSFX('click');
+      downloadCardImage(activeModalCard.url, activeModalCard.character_name);
+    });
+  }
 }
 
 function openCardDetail(card) {
+  activeModalCard = card;
   const modal = document.getElementById('modalCardDetail');
   const modalBox = modal ? modal.querySelector('.modal-detail-card') : null;
   if (!modal || !modalBox) return;
@@ -696,13 +931,69 @@ function openCardDetail(card) {
   modal.style.display = 'flex';
 }
 
-// 10. Navigasi Bawah & Logout
+async function downloadCardImage(url, name) {
+  try {
+    showToast('Mengunduh gambar...');
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `${name.replace(/\s+/g, '_')}_gacha.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+    showToast('Gambar tersimpan di galeri! 💾');
+  } catch (e) {
+    window.open(url, '_blank');
+  }
+}
+
+// 13. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
+function initShardExchange() {
+  const btnTukar = document.getElementById('btnTukarShard');
+  if (!btnTukar) return;
+
+  btnTukar.addEventListener('click', async () => {
+    if (!currentUser) return;
+    const currentShards = currentUser.shards || 0;
+
+    if (currentShards < 5) {
+      playSFX('click');
+      return showToast('Star Shards belum cukup (butuh 5 shard)');
+    }
+
+    playSFX('ssr');
+    currentUser.shards = currentShards - 5;
+    currentUser.tickets = (currentUser.tickets || 0) + 1;
+    lastKnownTickets = currentUser.tickets;
+    localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+
+    renderUI();
+    showToast('Sukses tukar 5 Shard ➔ +1 Tiket Gacha! 🎟️');
+
+    // Sinkronkan penambahan tiket langsung ke spreadsheet backend
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'admin_set_ticket',
+        adminPin: '9999',
+        targetUser: currentUser.username,
+        newTicket: currentUser.tickets
+      })
+    }).catch(console.error);
+  });
+}
+
+// 14. Navigasi Bawah & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
 
   navItems.forEach(item => {
     item.addEventListener('click', () => {
+      playSFX('click');
       const target = item.dataset.target;
       navItems.forEach(n => n.classList.remove('active'));
       panes.forEach(p => p.classList.remove('active'));
@@ -711,33 +1002,29 @@ function initTabs() {
       const pane = document.getElementById(target);
       if (pane) pane.classList.add('active');
 
-      if (target === 'tabGaleri') renderGallery(currentFilter);
+      if (target === 'tabGaleri') renderGallery();
+      if (target === 'tabAkun') renderStatsAndShards();
     });
   });
 
   const btnBukaAkun = document.getElementById('btnBukaAkun');
   if (btnBukaAkun) {
     btnBukaAkun.addEventListener('click', () => {
+      playSFX('click');
       navItems.forEach(n => n.classList.remove('active'));
       panes.forEach(p => p.classList.remove('active'));
       const navAkun = document.querySelector('[data-target="tabAkun"]');
       if (navAkun) navAkun.classList.add('active');
       const tabAkun = document.getElementById('tabAkun');
       if (tabAkun) tabAkun.classList.add('active');
+      renderStatsAndShards();
     });
   }
-
-  document.querySelectorAll('.filter-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderGallery(btn.dataset.filter);
-    });
-  });
 
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
     btnLogout.addEventListener('click', () => {
+      playSFX('click');
       localStorage.removeItem('gacha_user');
       currentUser = null;
       location.reload();
