@@ -1,7 +1,9 @@
 {
   "name": "AnimeGacha",
   "short_name": "AnimeGacha",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0d0f18",
   "theme_color": "#0d0f18",
@@ -11,7 +13,13 @@
       "src": "/icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
