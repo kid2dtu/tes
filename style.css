@@ -27,7 +27,6 @@ body {
   padding-bottom: calc(75px + env(safe-area-inset-bottom));
 }
 
-/* Kanvas Partikel Confetti */
 #fxCanvas {
   position: fixed;
   inset: 0;
@@ -37,7 +36,6 @@ body {
   z-index: 999;
 }
 
-/* Header */
 .app-header {
   position: sticky;
   top: 0;
@@ -63,7 +61,6 @@ body {
   cursor: pointer;
 }
 
-/* Tab Container */
 .app-container {
   max-width: 500px;
   margin: 0 auto;
@@ -73,7 +70,6 @@ body {
 .tab-pane.active { display: block; animation: fadeIn 0.25s ease-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Tiket Card */
 .ticket-status-card {
   display: flex;
   justify-content: space-between;
@@ -90,7 +86,7 @@ body {
 .reset-countdown { text-align: right; }
 .timer { font-family: monospace; font-size: 15px; font-weight: 700; color: #fbbf24; }
 
-/* Bilah Pity 30 */
+/* Bilah Pity 30 + Tombol Rincian */
 .pity-card {
   background: rgba(19, 27, 46, 0.6);
   border: 1px solid var(--border-glass);
@@ -102,9 +98,26 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+.pity-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .pity-label { font-size: 11px; font-weight: 700; color: #cbd5e1; }
+.btn-mini-info {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #a5b4fc;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-mini-info:active { transform: scale(0.95); background: var(--primary); color: #fff; }
 .pity-number { font-size: 12px; font-weight: 800; color: #ec4899; }
 .pity-bar-bg {
   width: 100%;
@@ -120,6 +133,123 @@ body {
   transition: width 0.4s ease;
   box-shadow: 0 0 10px rgba(236, 72, 153, 0.5);
 }
+
+/* Modal Pop-up Rincian & Drop List */
+.modal-info-card {
+  max-width: 440px;
+  text-align: left;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.modal-info-card h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.info-nav {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.info-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 8px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.info-tab-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+.info-content-pane { display: none; }
+.info-content-pane.active { display: block; }
+
+.rate-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.rate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+}
+.rate-badge {
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.rate-ssr .rate-badge { background: rgba(236, 72, 153, 0.2); color: var(--rarity-ssr); }
+.rate-sr .rate-badge { background: rgba(245, 158, 11, 0.2); color: var(--rarity-sr); }
+.rate-r .rate-badge { background: rgba(56, 189, 248, 0.2); color: var(--rarity-r); }
+.rate-desc { flex: 1; margin-left: 10px; color: #cbd5e1; font-size: 11px; }
+.rate-pct { font-weight: 800; font-size: 13px; }
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.rule-item {
+  display: flex;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+.rule-icon { font-size: 16px; line-height: 1.2; }
+.rule-item strong { display: block; font-size: 12px; margin-bottom: 2px; color: #f1f5f9; }
+.rule-item p { color: var(--text-muted); line-height: 1.4; }
+
+.drop-search-box { margin-bottom: 10px; }
+.drop-search-box input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #090d16;
+  border: 1px solid var(--border-glass);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+}
+.drop-list-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+.drop-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.drop-item-char { font-weight: 700; color: #fff; }
+.drop-item-anime { font-size: 10px; color: #818cf8; }
 
 /* 3D Card Stage */
 .card-stage {
@@ -149,7 +279,6 @@ body {
   overflow: hidden;
 }
 
-/* Kartu Belakang */
 .card-back {
   background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
   border: 2px solid rgba(129, 140, 248, 0.3);
@@ -171,7 +300,6 @@ body {
 .card-core-symbol { font-size: 48px; color: #818cf8; filter: drop-shadow(0 0 12px #818cf8); }
 .card-inner-pattern p { font-size: 12px; font-weight: 800; letter-spacing: 2px; color: rgba(255, 255, 255, 0.6); }
 
-/* Kartu Depan */
 .card-front {
   background: #111827;
   transform: rotateY(180deg);
@@ -218,7 +346,6 @@ body {
 .card-caption h3 { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-caption p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-/* Tombol Gacha */
 .btn-gacha {
   width: 100%;
   padding: 16px;
@@ -256,13 +383,9 @@ body {
   border-radius: 20px;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.3px;
 }
 
-/* Kotak Pencarian */
-.search-box {
-  margin-bottom: 10px;
-}
+.search-box { margin-bottom: 10px; }
 .search-box input {
   width: 100%;
   padding: 10px 14px;
@@ -273,11 +396,8 @@ body {
   font-size: 13px;
   outline: none;
 }
-.search-box input:focus {
-  border-color: var(--primary);
-}
+.search-box input:focus { border-color: var(--primary); }
 
-/* Kontrol Filter & Dropdown Sort */
 .gallery-controls {
   display: flex;
   justify-content: space-between;
@@ -298,10 +418,7 @@ body {
 }
 .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-.sort-box {
-  display: flex;
-  align-items: center;
-}
+.sort-box { display: flex; align-items: center; }
 .sort-dropdown {
   background: var(--bg-card);
   border: 1px solid var(--border-glass);
@@ -313,12 +430,8 @@ body {
   outline: none;
   cursor: pointer;
 }
-.sort-dropdown option {
-  background: #0f172a;
-  color: #fff;
-}
+.sort-dropdown option { background: #0f172a; color: #fff; }
 
-/* Grid Kartu Koleksi */
 .gallery-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -342,7 +455,6 @@ body {
 .mini-card-info .m-rarity { font-size: 11px; font-weight: 800; }
 .mini-card-info h4 { font-size: 12px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
 
-/* Badge NEW */
 .badge-new {
   position: absolute;
   top: 8px;
@@ -357,10 +469,7 @@ body {
   box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
   animation: pulseNew 1.5s infinite;
 }
-@keyframes pulseNew {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
+@keyframes pulseNew { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
 
 /* Modal Detail Kartu */
 .modal-detail-card {
@@ -368,7 +477,6 @@ body {
   max-width: 380px;
   padding: 16px;
   border: 2px solid var(--border-glass);
-  transition: border-color 0.3s;
 }
 .modal-detail-card.rarity-SSR { border-color: var(--rarity-ssr); box-shadow: 0 0 35px rgba(236, 72, 153, 0.35); }
 .modal-detail-card.rarity-SR { border-color: var(--rarity-sr); box-shadow: 0 0 30px rgba(245, 158, 11, 0.3); }
@@ -509,7 +617,6 @@ body {
 }
 .btn-shards:active { transform: scale(0.98); }
 
-/* Akun & Pengaturan */
 .profile-card {
   text-align: center;
   padding: 20px 16px;
@@ -557,7 +664,6 @@ body {
   margin-top: 6px;
 }
 
-/* Bottom Nav */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -589,7 +695,6 @@ body {
 .nav-item.active { color: #818cf8; }
 .nav-icon { font-size: 20px; }
 
-/* Modal Auth Base */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -638,7 +743,6 @@ body {
 }
 .auth-error { color: #f87171; font-size: 12px; margin-top: 10px; font-weight: 600; min-height: 16px; }
 
-/* Toast */
 .toast {
   position: fixed;
   top: 20px;
