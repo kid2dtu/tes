@@ -6,7 +6,7 @@ let isFlipping = false;
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
-// Daftar Karakter Anime & Seri untuk Variasi Kartu Otomatis
+// Database Karakter & Seri Anime
 const ANIME_CHARACTER_DATABASE = [
   { char: 'Shirakami Fubuki', anime: 'Hololive' },
   { char: 'Rem', anime: 'Re:Zero' },
@@ -56,7 +56,6 @@ const ANIME_CHARACTER_DATABASE = [
   { char: 'Hina', anime: 'Blue Archive' }
 ];
 
-// Deteksi Nama Karakter Bersih (Bebas dari 'Original Character')
 function resolveCardIdentity(card) {
   if (card.character_name && card.character_name !== 'Original Character') {
     return {
@@ -71,7 +70,6 @@ function resolveCardIdentity(card) {
     };
   }
 
-  // Hash URL gambar agar kartu yang sama selalu mendapatkan nama karakter yang konsisten
   let hash = 0;
   const str = card.url || '';
   for (let i = 0; i < str.length; i++) {
@@ -120,7 +118,7 @@ function initSyncListener() {
   });
 }
 
-// 2. Inisialisasi PWA & Izin Notifikasi
+// 2. Inisialisasi PWA & Notifikasi
 function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
@@ -171,7 +169,7 @@ function fireTicketNotification(title, body) {
   } else if ('Notification' in window && Notification.permission === 'granted') {
     new Notification(title, {
       body: body,
-      icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
+      icon: '/icon.png'
     });
   }
 }
@@ -328,7 +326,6 @@ if (btnGacha) {
       const data = await res.json();
       const item = data.results[0];
 
-      // Tentukan Nama Karakter Asli
       const identity = resolveCardIdentity({ url: item.url, anime_name: item.anime_name });
       const charName = (item.anime_name && item.anime_name !== 'Original Character') ? item.anime_name : identity.char;
       const animeName = identity.anime;
@@ -359,7 +356,6 @@ if (btnGacha) {
         isFlipping = false;
         btnGacha.disabled = false;
 
-        // Picu Notifikasi Khusus Saat Mendapat Kartu SR atau SSR
         if (rarity === 'SSR') {
           fireTicketNotification('✨ DAPAT KARTU SSR! ✨', `Luar biasa! Kamu baru saja mendapatkan ${newCard.character_name} (${newCard.anime_name}) dengan kelangkaan SSR!`);
         } else if (rarity === 'SR') {
@@ -395,7 +391,7 @@ if (cardWrapper) {
   });
 }
 
-// 7. Album Galeri Koleksi (Klik untuk Pratinjau Penuh)
+// 7. Album Galeri Koleksi
 function renderGallery(filter = 'all') {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -425,7 +421,6 @@ function renderGallery(filter = 'all') {
       </div>
     `;
 
-    // Klik kartu untuk membuka pop-up penuh
     el.addEventListener('click', () => {
       openCardDetail({
         url: c.url,
@@ -445,7 +440,7 @@ function renderGallery(filter = 'all') {
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
-  const modalBox = modal.querySelector('.modal-detail-card');
+  const modalBox = modal ? modal.querySelector('.modal-detail-card') : null;
 
   if (btnClose) {
     btnClose.addEventListener('click', () => {
@@ -453,12 +448,12 @@ function initCardDetailModal() {
     });
   }
 
-  // Tutup saat area luar diklik
-  modal.addEventListener('click', () => {
-    modal.style.display = 'none';
-  });
+  if (modal) {
+    modal.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+  }
 
-  // Cegah penutupan saat area kartu diklik
   if (modalBox) {
     modalBox.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -468,7 +463,8 @@ function initCardDetailModal() {
 
 function openCardDetail(card) {
   const modal = document.getElementById('modalCardDetail');
-  const modalBox = modal.querySelector('.modal-detail-card');
+  const modalBox = modal ? modal.querySelector('.modal-detail-card') : null;
+  if (!modal || !modalBox) return;
 
   modalBox.className = `modal-card modal-detail-card rarity-${card.rarity}`;
   document.getElementById('detailRarity').innerText = card.rarity;
