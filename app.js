@@ -4,6 +4,7 @@ let currentUser = JSON.parse(localStorage.getItem('gacha_user') || 'null');
 let deferredPrompt = null;
 let isFlipping = false;
 let currentFilter = 'all';
+let currentSort = 'date';
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
@@ -95,6 +96,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initCountdown();
   initSyncListener();
   initCardDetailModal();
+  initSortListener();
 });
 
 // 1. Sinkronisasi Realtime dengan Admin
@@ -157,7 +159,6 @@ function initPWA() {
   }
 }
 
-// Fungsi Permintaan Izin Notifikasi Otomatis
 async function requestNotificationDirect() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'granted') return;
@@ -213,7 +214,7 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// 4. Autentikasi Akun (Otomatis Minta Izin Notifikasi)
+// 4. Autentikasi Akun
 const btnAuth = document.getElementById('btnAuthSubmit');
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
@@ -226,7 +227,6 @@ if (btnAuth) {
       return;
     }
 
-    // Minta izin notifikasi langsung dari interaksi klik tombol login
     requestNotificationDirect();
 
     errBox.innerText = '';
@@ -404,7 +404,7 @@ if (cardWrapper) {
   });
 }
 
-// 7. Album Galeri Koleksi (Angka Berubah Dinamis Mengikuti Filter)
+// 7. Album Galeri Koleksi (Filter & Sortir Dinamis)
 function renderGallery(filter = 'all') {
   currentFilter = filter;
   const container = document.getElementById('gridGaleri');
@@ -413,10 +413,16 @@ function renderGallery(filter = 'all') {
   if (!container || !emptyBox) return;
 
   container.innerHTML = '';
-  const cards = (currentUser && currentUser.koleksi) ? currentUser.koleksi : [];
-  const filtered = filter === 'all' ? cards : cards.filter(c => c.rarity === filter);
+  
+  // Beri penanda urutan asli index agar sortir tanggal tetap konsisten (0 = terbaru)
+  const cards = (currentUser && currentUser.koleksi) 
+    ? currentUser.koleksi.map((c, idx) => ({ ...c, _origIdx: idx })) 
+    : [];
 
-  // Perbarui Angka Jumlah Koleksi Sesuai Filter
+  // Filter Kelangkaan
+  let filtered = filter === 'all' ? [...cards] : cards.filter(c => c.rarity === filter);
+
+  // Perbarui Angka Jumlah Koleksi
   if (countBadge) {
     countBadge.innerText = `${filtered.length} Kartu`;
   }
@@ -426,6 +432,23 @@ function renderGallery(filter = 'all') {
     return;
   }
   emptyBox.style.display = 'none';
+
+  // Logika Pengurutan
+  const rarityRank = { 'SSR': 3, 'SR': 2, 'R': 1 };
+  filtered.sort((a, b) => {
+    if (currentSort === 'name') {
+      const nameA = resolveCardIdentity(a).char;
+      const nameB = resolveCardIdentity(b).char;
+      return nameA.localeCompare(nameB);
+    } else if (currentSort === 'rarity') {
+      const rankDiff = (rarityRank[b.rarity] || 0) - (rarityRank[a.rarity] || 0);
+      if (rankDiff !== 0) return rankDiff;
+      return a._origIdx - b._origIdx;
+    } else {
+      // Default: Tanggal / Urutan dapat terbaru
+      return a._origIdx - b._origIdx;
+    }
+  });
 
   filtered.forEach(c => {
     const identity = resolveCardIdentity(c);
@@ -456,7 +479,18 @@ function renderGallery(filter = 'all') {
   });
 }
 
-// 8. Logika Modal Pratinjau Penuh Kartu
+// 8. Event Listener Pengurutan Dropdown
+function initSortListener() {
+  const sortSelect = document.getElementById('sortSelect');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', (e) => {
+      currentSort = e.target.value;
+      renderGallery(currentFilter);
+    });
+  }
+}
+
+// 9. Logika Modal Pratinjau Penuh Kartu
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
@@ -498,7 +532,7 @@ function openCardDetail(card) {
   modal.style.display = 'flex';
 }
 
-// 9. Navigasi Bawah & Logout
+// 10. Navigasi Bawah & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
