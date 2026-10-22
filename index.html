@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>Anime Gacha Harian</title>
   
+  <!-- Anti-Blokir Hotlink Gambar Anime -->
+  <meta name="referrer" content="no-referrer">
+  
   <link rel="icon" type="image/png" href="/icon.png">
   <link rel="apple-touch-icon" href="/icon.png">
   <link rel="manifest" href="/manifest.json">
@@ -54,7 +57,7 @@
         <div class="rate-table">
           <div class="rate-row rate-ssr">
             <span class="rate-badge">SSR</span>
-            <span class="rate-desc">Super Super Rare (Karakter Legendaris)</span>
+            <span class="rate-desc">Super Super Rare (Karakter Pilihan)</span>
             <span class="rate-pct">5%</span>
           </div>
           <div class="rate-row rate-sr">
@@ -109,7 +112,7 @@
       <button id="btnCloseDetail" class="btn-close-modal">✕</button>
       <div class="detail-badge" id="detailRarity">SSR</div>
       <div class="detail-img-box">
-        <img id="detailImg" src="" alt="Detail Kartu">
+        <img id="detailImg" src="" referrerpolicy="no-referrer" alt="Detail Kartu">
       </div>
       <div class="detail-info">
         <h3 id="detailCharacter">Nama Karakter</h3>
@@ -176,7 +179,7 @@
           <div class="card-face card-front" id="kartuDepan">
             <div class="rarity-badge" id="kartuRarity">SSR</div>
             <div class="img-wrapper">
-              <img id="kartuImg" src="" alt="Anime Card">
+              <img id="kartuImg" src="" referrerpolicy="no-referrer" alt="Anime Card">
             </div>
             <div class="card-caption">
               <h3 id="kartuAnime">Nama Karakter</h3>
