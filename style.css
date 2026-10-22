@@ -111,7 +111,7 @@ body {
 }
 
 /* =========================================
-   PERBAIKAN KARTU 3D & POSISI FLIP
+   KARTU 3D & POSISI FLIP
    ========================================= */
 .card-stage {
   perspective: 1000px;
@@ -144,7 +144,6 @@ body {
   transform: rotateY(180deg);
 }
 
-/* Kunci penempatan absolut di sudut (0,0) agar tidak melorot */
 .card-front, .card-back {
   position: absolute;
   top: 0;
@@ -157,7 +156,6 @@ body {
   overflow: hidden;
 }
 
-/* Sisi Belakang: Sleeve Tarot */
 .tarot-back {
   background: radial-gradient(circle at center, #1b2038 0%, #0c0f1c 100%);
   border: 2px solid #f59e0b;
@@ -237,7 +235,6 @@ body {
   50% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 24px rgba(245, 158, 11, 1); }
 }
 
-/* Sisi Depan Kartu: Hasil Tarikan */
 .card-back {
   background: #151824;
   transform: rotateY(180deg);
@@ -286,11 +283,12 @@ body {
   transition: 0.2s;
 }
 
-.btn-primary { width: 100%; padding: 12px; background: #ff5e9a; color: white; }
+.btn-primary { width: 100%; padding: 12px; background: #4f46e5; color: white; }
 .btn-gacha { width: 100%; padding: 16px; background: linear-gradient(90deg, #ec4899, #8b5cf6); color: white; font-size: 1.1rem; }
 .btn-secondary { padding: 8px 14px; background: #2563eb; color: white; width: auto; }
 .btn-danger { width: 100%; padding: 12px; background: #ef4444; color: white; margin-top: 16px; }
-.btn-download { width: 100%; padding: 12px; background: #10b981; color: white; font-size: 0.95rem; margin-top: 14px; }
+.btn-download { width: 100%; padding: 13px; background: #10b981; color: white; font-size: 0.95rem; margin-top: 14px; }
+.btn-download:hover { background: #059669; }
 .btn-gacha:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Album Koleksi */
@@ -456,7 +454,9 @@ body {
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: rgba(8, 10, 18, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -466,15 +466,118 @@ body {
 
 .modal.hidden { display: none; }
 .modal-box {
-  background: #181c2e;
+  background: #161b2e;
   width: 100%;
   max-width: 380px;
-  padding: 20px;
-  border-radius: 16px;
-  border: 1px solid #2b324d;
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid #2b3553;
   position: relative;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
 }
 
+/* =========================================
+   DESAIN MODAL LOGIN RAPI & MODERN
+   ========================================= */
+.auth-box {
+  max-width: 360px;
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-logo-wrapper {
+  display: inline-flex;
+  padding: 8px;
+  background: rgba(255, 94, 154, 0.1);
+  border: 1px solid rgba(255, 94, 154, 0.3);
+  border-radius: 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 0 16px rgba(255, 94, 154, 0.2);
+}
+
+.auth-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+}
+
+.auth-brand h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 4px;
+}
+
+.auth-brand p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.input-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 12px 14px;
+  background: #0d111d;
+  border: 1px solid #242c44;
+  border-radius: 10px;
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 12px rgba(79, 70, 229, 0.35);
+}
+
+#authPin {
+  letter-spacing: 8px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.auth-hint {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.73rem;
+  color: #94a3b8;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.btn-auth {
+  padding: 13px;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+}
+
+.btn-auth:hover {
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
+}
+
+/* Modal Detail & Rules */
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -490,7 +593,6 @@ body {
   cursor: pointer;
 }
 
-/* Modal Detail Kartu */
 .card-detail-img-wrapper {
   position: relative;
   width: 100%;
@@ -533,7 +635,6 @@ body {
   margin-top: 4px;
 }
 
-/* Modal Info Aturan */
 .rules-box {
   max-height: 80vh;
   display: flex;
