@@ -357,14 +357,26 @@ document.getElementById('kartuWrapper')?.addEventListener('click', () => {
   }
 });
 
-// 9. Galeri Koleksi
+// 9. Galeri Koleksi (Deduplikasi Kartu Kembar Jadi 1 + Tampilkan Badge xCount)
 function renderGallery() {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
   if (!container || !emptyBox) return;
 
   container.innerHTML = '';
-  const cards = (currentUser?.koleksi || []).map((c, idx) => ({ ...c, _idx: idx }));
+  
+  // Kelompokkan kartu kembar berdasarkan nama karakter
+  const uniqueMap = new Map();
+  (currentUser?.koleksi || []).forEach((c, idx) => {
+    const key = (c.character_name || '').toLowerCase();
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, { ...c, _origIdx: idx, count: 1 });
+    } else {
+      uniqueMap.get(key).count += 1;
+    }
+  });
+
+  const cards = Array.from(uniqueMap.values());
 
   let filtered = cards.filter(c => {
     const matchRarity = currentFilter === 'all' || c.rarity === currentFilter;
@@ -372,25 +384,26 @@ function renderGallery() {
     return matchRarity && (!currentSearch || target.includes(currentSearch));
   });
 
-  document.getElementById('txtKoleksiCount').innerText = `${filtered.length} Kartu`;
+  document.getElementById('txtKoleksiCount').innerText = `${filtered.length} Karakter Unik`;
   emptyBox.style.display = filtered.length === 0 ? 'block' : 'none';
 
   const rank = { SSR: 3, SR: 2, R: 1 };
   filtered.sort((a, b) => {
     if (currentSort === 'name') return (a.character_name || '').localeCompare(b.character_name || '');
     if (currentSort === 'rarity') return (rank[b.rarity] || 0) - (rank[a.rarity] || 0);
-    return (b.timestamp || b._idx) - (a.timestamp || a._idx);
+    return (b.timestamp || b._origIdx) - (a.timestamp || a._origIdx);
   });
 
   filtered.forEach(c => {
-    const key = `${c.url}_${c._idx}`;
+    const key = `${c.url}_${c._origIdx}`;
     const isNew = !seenCards.has(key);
     const safeName = (c.character_name || '').replace(/'/g, "\\'");
     const el = document.createElement('div');
     el.className = `mini-card rarity-${c.rarity}`;
     el.innerHTML = `
       ${isNew ? '<span class="badge-new">NEW</span>' : ''}
-      <img src="${c.url}" loading="lazy" referrerpolicy="no-referrer" alt="${c.character_name}" onerror="window.handleImageError(this, '${safeName}', ${c._idx})">
+      ${c.count > 1 ? `<span style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.75); color:#fbbf24; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px; border:1px solid rgba(251,191,36,0.4); z-index:5;">x${c.count}</span>` : ''}
+      <img src="${c.url}" loading="lazy" referrerpolicy="no-referrer" alt="${c.character_name}" onerror="window.handleImageError(this, '${safeName}', ${c._origIdx})">
       <div class="mini-card-info">
         <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
         <h4>${c.character_name}</h4>
@@ -457,7 +470,7 @@ function openCardDetail(card) {
   document.getElementById('detailRarity').innerText = card.rarity;
   document.getElementById('detailRarity').style.color = `var(--rarity-${card.rarity.toLowerCase()})`;
   document.getElementById('detailImg').src = card.url;
-  document.getElementById('detailCharacter').innerText = card.character_name;
+  document.getElementById('detailCharacter').innerText = `${card.character_name} ${card.count > 1 ? `(x${card.count})` : ''}`;
   document.getElementById('detailAnime').innerText = card.anime_name;
   document.getElementById('detailArtist').innerText = card.artist_name || 'Official Art';
   document.getElementById('detailDate').innerText = card.date;
