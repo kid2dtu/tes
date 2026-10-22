@@ -1,17 +1,6 @@
 {
-  "name": "AnimeGacha",
-  "short_name": "AnimeGacha",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0d0f18",
-  "theme_color": "#0d0f18",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/akuadmin", "destination": "/akuadmin.html" }
   ]
 }
