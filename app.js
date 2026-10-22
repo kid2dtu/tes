@@ -142,9 +142,9 @@ const GACHA_ROSTER = [
   { character_name: 'Subaru Natsuki', anime_name: 'Re:Zero', rarity: 'R', tag: 'natsuki_subaru' }
 ];
 
-// 4. Engine Fetch Gambar Safebooru HD
+// 4. Engine Fetch Gambar Safebooru HD (Bypass CORS Proxy)
 async function fetchSafebooruIllustration(tag) {
-  const cacheKey = `sb_img_v1_${tag}`;
+  const cacheKey = `sb_img_v2_${tag}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
     try {
@@ -155,18 +155,26 @@ async function fetchSafebooruIllustration(tag) {
     } catch (e) {}
   }
 
-  try {
-    const url = `https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=25&tags=${encodeURIComponent(tag + ' solo rating:safe')}`;
-    const res = await fetch(url);
-    const posts = await res.json();
-    const valid = (posts || []).filter(p => p.image && !p.image.endsWith('.mp4') && !p.image.endsWith('.webm'));
+  const rawApi = `https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=25&tags=${encodeURIComponent(tag + ' solo rating:safe')}`;
+  const proxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent(rawApi)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(rawApi)}`
+  ];
 
-    if (valid.length > 0) {
-      const urls = valid.map(p => `https://safebooru.org/images/${p.directory}/${p.image}`);
-      localStorage.setItem(cacheKey, JSON.stringify(urls));
-      return urls[Math.floor(Math.random() * urls.length)];
-    }
-  } catch (err) {}
+  for (const proxyUrl of proxies) {
+    try {
+      const res = await fetch(proxyUrl);
+      if (!res.ok) continue;
+      const posts = await res.json();
+      const valid = (posts || []).filter(p => p.image && !p.image.endsWith('.mp4') && !p.image.endsWith('.webm'));
+
+      if (valid.length > 0) {
+        const urls = valid.map(p => `https://safebooru.org/images/${p.directory}/${p.image}`);
+        localStorage.setItem(cacheKey, JSON.stringify(urls));
+        return urls[Math.floor(Math.random() * urls.length)];
+      }
+    } catch (err) {}
+  }
 
   return 'https://s4.anilist.co/file/anilistcdn/character/large/b88572-10kF6A00F70p.png';
 }
@@ -489,14 +497,10 @@ async function downloadDirectToDisk(url, name) {
   const filename = `${name.replace(/\s+/g, '_')}_safebooru.jpg`;
 
   try {
-    let res;
-    try {
-      res = await fetch(url);
-      if (!res.ok) throw new Error();
-    } catch (e) {
-      const cleanUrl = url.replace(/^https?:\/\//i, '');
-      res = await fetch(`https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}`);
-    }
+    const cleanUrl = url.replace(/^https?:\/\//i, '');
+    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}`;
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error();
 
     const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
