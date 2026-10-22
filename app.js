@@ -80,23 +80,18 @@ function triggerSSRConfetti() {
   render();
 }
 
-// 3. Engine Pencarian & Auto-Repair Gambar AniList
+// 3. Engine Gambar AniList & Auto-Repair
 async function fetchRealImageByName(charName) {
-  const cacheKey = `real_img_${charName.toLowerCase().replace(/\s+/g, '_')}`;
+  const cacheKey = `img_${charName.toLowerCase().replace(/\s+/g, '_')}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) return cached;
-
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
-        query: `query ($search: String) {
-          Character(search: $search) {
-            image { large }
-          }
-        }`,
-        variables: { search: charName }
+        query: `query ($s: String) { Character(search: $s) { image { large } } }`,
+        variables: { s: charName }
       })
     });
     const json = await res.json();
@@ -107,26 +102,6 @@ async function fetchRealImageByName(charName) {
     }
   } catch (err) {}
   return null;
-}
-
-async function autoRepairCollection() {
-  if (!currentUser || !Array.isArray(currentUser.koleksi)) return;
-  let updated = false;
-
-  for (let card of currentUser.koleksi) {
-    if (!card.url || card.url.includes('b129760-') || card.url.includes('myanimelist.net') || card.url.includes('weserv.nl') || card.url.includes('b149409-') || card.url.includes('b133887-') || card.url.includes('b36828-') || card.url.includes('b204647-') || card.url.includes('b204648-') || card.url.includes('b34470-')) {
-      const realUrl = await fetchRealImageByName(card.character_name);
-      if (realUrl) {
-        card.url = realUrl;
-        updated = true;
-      }
-    }
-  }
-
-  if (updated) {
-    localStorage.setItem('gacha_user', JSON.stringify(currentUser));
-    renderGallery();
-  }
 }
 
 window.handleImageError = async function(imgElement, charName, cardIdx) {
@@ -141,28 +116,13 @@ window.handleImageError = async function(imgElement, charName, cardIdx) {
   }
 };
 
-// 4. Engine Pool AniList Live
+// 4. Engine Pool Karakter AniList Live
 async function loadLivePool() {
-  const cached = localStorage.getItem('anilist_live_pool_v1');
+  const cached = localStorage.getItem('anilist_pool_cache');
   if (cached) {
-    try {
-      livePool = JSON.parse(cached);
-      return;
-    } catch (e) {}
+    try { livePool = JSON.parse(cached); return; } catch (e) {}
   }
-
-  const query = `query {
-    Page(page: 1, perPage: 50) {
-      characters(sort: FAVOURITES_DESC) {
-        name { full }
-        image { large }
-        media(sort: FAVOURITES_DESC, perPage: 1) {
-          nodes { title { userPreferred } }
-        }
-      }
-    }
-  }`;
-
+  const query = `query { Page(page: 1, perPage: 50) { characters(sort: FAVOURITES_DESC) { name { full } image { large } media(sort: FAVOURITES_DESC, perPage: 1) { nodes { title { userPreferred } } } } } }`;
   try {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST',
@@ -170,37 +130,31 @@ async function loadLivePool() {
       body: JSON.stringify({ query })
     });
     const json = await res.json();
-    const list = json?.data?.Page?.characters || [];
-    livePool = list.map(c => ({
+    livePool = (json?.data?.Page?.characters || []).map(c => ({
       character_name: c.name.full,
       anime_name: c.media?.nodes?.[0]?.title?.userPreferred || 'Anime Series',
       url: c.image.large
     }));
     if (livePool.length > 0) {
-      localStorage.setItem('anilist_live_pool_v1', JSON.stringify(livePool));
+      localStorage.setItem('anilist_pool_cache', JSON.stringify(livePool));
     }
   } catch (err) {}
 }
 
 async function rollCard(targetRarity) {
-  if (!livePool || livePool.length === 0) {
-    await loadLivePool();
-  }
-
+  if (!livePool || livePool.length === 0) await loadLivePool();
   let candidates = livePool;
   if (livePool.length >= 30) {
     if (targetRarity === 'SSR') candidates = livePool.slice(0, 10);
     else if (targetRarity === 'SR') candidates = livePool.slice(10, 25);
     else candidates = livePool.slice(25);
   }
-
   const chosen = candidates[Math.floor(Math.random() * candidates.length)] || {
-    character_name: 'Rem',
-    anime_name: 'Re:Zero',
-    url: 'https://s4.anilist.co/file/anilistcdn/character/large/b88572-10kF6A00F70p.png'
+    character_name: 'Subaru Natsuki',
+    anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
+    url: 'https://s4.anilist.co/file/anilistcdn/character/large/b88573-mQ847hO5n9hA.png'
   };
-
-  return { ...chosen, rarity: targetRarity, artist_name: 'Official Anime Art' };
+  return { ...chosen, rarity: targetRarity, artist_name: chosen.anime_name };
 }
 
 // 5. Inisialisasi
@@ -211,10 +165,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   } else {
     if (modalAuth) modalAuth.style.display = 'none';
     renderUI();
-    autoRepairCollection();
     syncUserData();
   }
-
   loadLivePool();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   initTabs();
@@ -264,7 +216,6 @@ document.getElementById('btnAuthSubmit')?.addEventListener('click', async () => 
 
   if (!username || pin.length !== 4) return errBox.innerText = 'Username wajib diisi & PIN 4 angka!';
   errBox.innerText = '';
-
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -276,7 +227,6 @@ document.getElementById('btnAuthSubmit')?.addEventListener('click', async () => 
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       document.getElementById('modalAuth').style.display = 'none';
       renderUI();
-      autoRepairCollection();
       showToast('Berhasil masuk! 🎟️');
     } else {
       errBox.innerText = result.message || 'Login gagal';
@@ -301,7 +251,6 @@ async function syncUserData() {
       }
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       renderUI();
-      autoRepairCollection();
     }
   } catch (e) {}
 }
