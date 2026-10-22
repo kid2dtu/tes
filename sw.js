@@ -8,7 +8,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Pemicu Notifikasi Global
+// Pemicu Notifikasi Global Menggunakan Ikon Aplikasi Baru
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'NOTIF_RESET') {
     const title = event.data.title || 'Tiket Harian Siap! 🎟️';
@@ -16,8 +16,8 @@ self.addEventListener('message', (event) => {
     
     self.registration.showNotification(title, {
       body: body,
-      icon: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
-      badge: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png',
+      icon: '/icon.png',
+      badge: '/icon.png',
       vibrate: [200, 100, 200]
     });
   }
