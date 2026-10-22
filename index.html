@@ -15,12 +15,15 @@
 </head>
 <body>
 
+  <!-- Kanvas Efek Partikel Confetti SSR -->
+  <canvas id="fxCanvas"></canvas>
+
   <!-- Modal Login & PIN -->
   <div id="modalAuth" class="modal-overlay">
     <div class="modal-card">
       <div class="auth-icon">✨</div>
       <h2>Masuk ke Akun</h2>
-      <p class="auth-desc">Ketik username dan 4 digit PIN kamu. Akun baru akan otomatis terdaftar.</p>
+      <p class="auth-desc">Ketik username dan 4 digit PIN kamu. Akun baru bakal otomatis terdaftar.</p>
       
       <div class="form-group">
         <label>Username</label>
@@ -52,6 +55,7 @@
           <span>🎨 <span id="detailArtist">Artis</span></span>
           <span>🕒 <span id="detailDate">Waktu Diperoleh</span></span>
         </div>
+        <button id="btnDownloadCard" class="btn-download">💾 Simpan Gambar ke HP</button>
       </div>
     </div>
   </div>
@@ -80,6 +84,17 @@
         <div class="reset-countdown">
           <span class="label">Reset Tiket</span>
           <span id="txtCountdown" class="timer">--:--:--</span>
+        </div>
+      </div>
+
+      <!-- Bilah Progres Pity 30 SSR -->
+      <div class="pity-card">
+        <div class="pity-header">
+          <span class="pity-label">✨ Pity SSR (Jaminan 30 Tarikan)</span>
+          <span id="txtPityCount" class="pity-number">0 / 30</span>
+        </div>
+        <div class="pity-bar-bg">
+          <div id="pityBarFill" class="pity-bar-fill" style="width: 0%;"></div>
         </div>
       </div>
 
@@ -121,8 +136,13 @@
           <h2>Album Koleksi</h2>
           <span id="txtKoleksiCount" class="badge-count">0 Kartu</span>
         </div>
+
+        <!-- Kolom Pencarian Karakter -->
+        <div class="search-box">
+          <input type="text" id="inputSearchGaleri" placeholder="🔍 Cari karakter / anime..." autocomplete="off">
+        </div>
         
-        <!-- Bar Kontrol: Filter Rarity + Dropdown Sort -->
+        <!-- Bar Kontrol Filter & Sortir -->
         <div class="gallery-controls">
           <div class="rarity-filters">
             <button class="filter-chip active" data-filter="all">Semua</button>
@@ -147,7 +167,7 @@
       </div>
     </section>
 
-    <!-- Tab 3: Pengaturan Akun & PWA -->
+    <!-- Tab 3: Pengaturan Akun, Statistik & Star Shard -->
     <section id="tabAkun" class="tab-pane">
       <div class="profile-card">
         <div class="profile-avatar">👤</div>
@@ -155,11 +175,48 @@
         <span class="profile-badge">Akun Tersimpan di Google Sheets</span>
       </div>
 
+      <!-- Kartu Statistik Akun -->
+      <div class="stats-card">
+        <h4>📊 Statistik Keberuntungan</h4>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-val" id="statTotalTarik">0</span>
+            <span class="stat-lbl">Total Tarikan</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val" id="statKarakterUnik">0/150</span>
+            <span class="stat-lbl">Karakter Unik</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val rate-ssr" id="statSSRRate">0%</span>
+            <span class="stat-lbl">SSR Rate</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val rate-sr" id="statSRRate">0%</span>
+            <span class="stat-lbl">SR Rate</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kartu Daur Ulang Star Shard -->
+      <div class="shards-card">
+        <div class="shards-header">
+          <div>
+            <h4>⭐ Star Shards (Daur Ulang)</h4>
+            <p>Dapat +1 Shard tiap kali narik kartu kembar.</p>
+          </div>
+          <div class="shards-badge">
+            <span id="txtShardCount">0</span> ⭐
+          </div>
+        </div>
+        <button id="btnTukarShard" class="btn-shards">Tukar 5 Shard ➔ +1 Tiket Gacha 🎟️</button>
+      </div>
+
       <div class="settings-list">
         <div class="settings-item">
           <div>
             <h4>Notifikasi Tiket Reset (00:00 WIB)</h4>
-            <p>Dapatkan pemberitahuan otomatis saat jatah tiket terisi kembali.</p>
+            <p>Dapatkan pemberitahuan otomatis pas jatah tiket terisi kembali.</p>
           </div>
           <button id="btnIzinNotif" class="btn-secondary">Aktifkan</button>
         </div>
