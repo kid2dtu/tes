@@ -715,7 +715,7 @@ function initGalleryControls() {
   });
 }
 
-// 11. Modal Pratinjau & Simpan Gambar Langsung ke Disk (Anti-New-Tab)
+// 11. Modal Pratinjau & Simpan Gambar Langsung ke Disk (Bypass CORS)
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
@@ -766,29 +766,46 @@ function openCardDetail(card) {
 
 async function downloadCardImage(url, name) {
   showToast('Menyiapkan download gambar...');
-  const filename = `${name.replace(/\s+/g, '_')}_gacha.png`;
+  
+  // Deteksi ekstensi asli (apakah .gif atau .png)
+  const rawExt = url.split('.').pop().split('?')[0].toLowerCase();
+  const ext = ['gif', 'png', 'jpg', 'jpeg', 'webp'].includes(rawExt) ? rawExt : 'png';
+  const filename = `${name.replace(/\s+/g, '_')}_gacha.${ext}`;
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Fetch gagal');
-    const blob = await res.blob();
+  // Daftar proxy gambar untuk menembus CORS nekos.best
+  const proxyList = [
+    `https://images.weserv.nl/?url=${encodeURIComponent(url)}&default=${encodeURIComponent(url)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    url
+  ];
+
+  let blob = null;
+  for (const targetUrl of proxyList) {
+    try {
+      const res = await fetch(targetUrl);
+      if (res.ok) {
+        blob = await res.blob();
+        if (blob && blob.size > 0) break;
+      }
+    } catch (err) {
+      // Coba proxy berikutnya
+    }
+  }
+
+  if (blob) {
     const blobUrl = URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = blobUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    
-    // Beri jeda 2 detik sebelum revoke agar browser selesai mengunduh
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-    }, 2000);
+    }, 2500);
     showToast('Gambar berhasil disimpan ke disk! 💾');
-  } catch (err) {
-    console.error('Download gagal:', err);
+  } else {
     showToast('Gagal mengunduh gambar');
   }
 }
