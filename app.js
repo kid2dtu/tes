@@ -19,12 +19,8 @@ if (currentUser) {
 // 1. Audio Synthesizer (SFX Bawaan Browser)
 let audioCtx = null;
 function getAudioContext() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 
@@ -32,7 +28,6 @@ function playSFX(type) {
   try {
     const ctx = getAudioContext();
     const now = ctx.currentTime;
-
     if (type === 'click') {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -58,8 +53,7 @@ function playSFX(type) {
       osc.start(now);
       osc.stop(now + 0.2);
     } else if (type === 'sr') {
-      const notes = [659.25, 783.99, 987.77, 1318.51];
-      notes.forEach((freq, idx) => {
+      [659.25, 783.99, 987.77, 1318.51].forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
@@ -72,8 +66,7 @@ function playSFX(type) {
         osc.stop(now + idx * 0.08 + 0.3);
       });
     } else if (type === 'ssr') {
-      const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
-      notes.forEach((freq, idx) => {
+      [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98].forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'triangle';
@@ -91,7 +84,7 @@ function playSFX(type) {
   }
 }
 
-// 2. Partikel Confetti Canvas SSR
+// 2. Partikel Confetti SSR Canvas
 function triggerSSRConfetti() {
   const canvas = document.getElementById('fxCanvas');
   if (!canvas) return;
@@ -118,7 +111,6 @@ function triggerSSRConfetti() {
   function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     let active = false;
-
     particles.forEach(p => {
       if (p.alpha > 0) {
         active = true;
@@ -126,7 +118,6 @@ function triggerSSRConfetti() {
         p.y += p.dy;
         p.dy += 0.35;
         p.alpha -= p.decay;
-
         ctx.save();
         ctx.globalAlpha = Math.max(0, p.alpha);
         ctx.fillStyle = p.color;
@@ -136,17 +127,13 @@ function triggerSSRConfetti() {
         ctx.restore();
       }
     });
-
-    if (active) {
-      requestAnimationFrame(render);
-    } else {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+    if (active) requestAnimationFrame(render);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
   render();
 }
 
-// 3. Database Karakter Anime Lengkap
+// 3. Database Karakter Anime (150+ Karakter)
 const ANIME_CHARACTER_DATABASE = [
   { char: 'Rem', anime: 'Re:Zero' }, { char: 'Ram', anime: 'Re:Zero' }, { char: 'Emilia', anime: 'Re:Zero' },
   { char: 'Beatrice', anime: 'Re:Zero' }, { char: 'Echidna', anime: 'Re:Zero' }, { char: 'Megumin', anime: 'KonoSuba' },
@@ -207,18 +194,11 @@ const ANIME_CHARACTER_DATABASE = [
 
 function resolveCardIdentity(card) {
   if (card.character_name && card.character_name !== 'Original Character') {
-    return {
-      char: card.character_name,
-      anime: card.anime_name || 'Anime Series'
-    };
+    return { char: card.character_name, anime: card.anime_name || 'Anime Series' };
   }
   if (card.anime_name && card.anime_name !== 'Original Character' && card.anime_name !== 'Anime Special') {
-    return {
-      char: card.anime_name,
-      anime: 'Anime Series'
-    };
+    return { char: card.anime_name, anime: 'Anime Series' };
   }
-
   let hash = 0;
   const str = card.url || '';
   for (let i = 0; i < str.length; i++) {
@@ -237,7 +217,6 @@ window.addEventListener('DOMContentLoaded', () => {
     renderUI();
     syncUserData();
   }
-
   initPWA();
   initTabs();
   initCountdown();
@@ -247,7 +226,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initShardExchange();
 });
 
-// 4. Sinkronisasi Realtime Antar-Perangkat
+// 4. Sinkronisasi Realtime
 function initSyncListener() {
   syncChannel.onmessage = (event) => {
     if (event.data && event.data.type === 'TICKET_UPDATED') {
@@ -263,19 +242,13 @@ function initSyncListener() {
   };
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && currentUser) {
-      syncUserData();
-    }
+    if (document.visibilityState === 'visible' && currentUser) syncUserData();
   });
-
   window.addEventListener('focus', () => {
     if (currentUser) syncUserData();
   });
-
   setInterval(() => {
-    if (document.visibilityState === 'visible' && currentUser && !isFlipping) {
-      syncUserData();
-    }
+    if (document.visibilityState === 'visible' && currentUser && !isFlipping) syncUserData();
   }, 5000);
 }
 
@@ -284,7 +257,6 @@ function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
   }
-
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -322,7 +294,6 @@ function initPWA() {
 async function requestNotificationDirect() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'granted') return;
-
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
@@ -338,23 +309,18 @@ function fireTicketNotification(title, body) {
   if (navigator.serviceWorker && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({ type: 'NOTIF_RESET', title, body });
   } else if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, {
-      body: body,
-      icon: '/icon.png'
-    });
+    new Notification(title, { body: body, icon: '/icon.png' });
   }
 }
 
 // 6. Hitung Mundur Reset 00:00 WIB
 function initCountdown() {
   let hasTriggeredMidnight = false;
-
   function updateTimer() {
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-
     const diff = tomorrow - now;
 
     if (diff <= 2000 && !hasTriggeredMidnight) {
@@ -374,7 +340,7 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// 7. Autentikasi Akun (Tombol Masuk / Daftar)
+// 7. Autentikasi Akun
 const btnAuth = document.getElementById('btnAuthSubmit');
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
@@ -389,7 +355,6 @@ if (btnAuth) {
     }
 
     requestNotificationDirect();
-
     errBox.innerText = '';
     btnAuth.disabled = true;
     btnAuth.innerText = 'Memeriksa akun...';
@@ -400,7 +365,6 @@ if (btnAuth) {
         body: JSON.stringify({ action: 'login', username, pin })
       });
       const result = await res.json();
-
       if (result.success) {
         currentUser = {
           username: result.username,
@@ -443,10 +407,8 @@ async function syncUserData() {
       lastKnownTickets = result.tickets;
       currentUser.tickets = result.tickets;
       currentUser.koleksi = result.koleksi || [];
-
       currentUser.pity = currentUser.pity || 0;
       currentUser.shards = currentUser.shards || 0;
-
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       renderUI();
     }
@@ -479,11 +441,9 @@ function renderStatsAndShards() {
   if (!currentUser) return;
   const cards = currentUser.koleksi || [];
   const totalTarik = cards.length;
-  
   const uniqueChars = new Set(cards.map(c => resolveCardIdentity(c).char)).size;
   const ssrCount = cards.filter(c => c.rarity === 'SSR').length;
   const srCount = cards.filter(c => c.rarity === 'SR').length;
-
   const ssrRate = totalTarik > 0 ? ((ssrCount / totalTarik) * 100).toFixed(1) : 0;
   const srRate = totalTarik > 0 ? ((srCount / totalTarik) * 100).toFixed(1) : 0;
 
@@ -500,7 +460,7 @@ function renderStatsAndShards() {
   if (elShard) elShard.innerText = currentUser.shards || 0;
 }
 
-// 9. Tarik Gacha + Logika Pity 30, SFX & Confetti
+// 9. Tarik Gacha
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -510,13 +470,11 @@ if (btnGacha) {
     }
 
     playSFX('click');
-
     const cardWrapper = document.getElementById('kartuWrapper');
     const cardFront = document.getElementById('kartuDepan');
 
     isFlipping = true;
     btnGacha.disabled = true;
-
     cardWrapper.classList.remove('flipped');
     await new Promise(r => setTimeout(r, 350));
     showToast('Memanggil kartu anime...');
@@ -586,11 +544,8 @@ if (btnGacha) {
       currentUser.tickets = Math.max(0, currentUser.tickets - 1);
       lastKnownTickets = currentUser.tickets;
 
-      if (rarity === 'SSR') {
-        currentUser.pity = 0;
-      } else {
-        currentUser.pity = (currentUser.pity || 0) + 1;
-      }
+      if (rarity === 'SSR') currentUser.pity = 0;
+      else currentUser.pity = (currentUser.pity || 0) + 1;
 
       currentUser.koleksi.push(newCard);
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
@@ -650,7 +605,7 @@ if (cardWrapper) {
   });
 }
 
-// 10. Album Galeri Koleksi (Pencarian, Filter, Sortir & NEW Badge)
+// 10. Album Galeri Koleksi
 function renderGallery() {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -658,7 +613,6 @@ function renderGallery() {
   if (!container || !emptyBox) return;
 
   container.innerHTML = '';
-
   const cards = (currentUser && currentUser.koleksi) 
     ? currentUser.koleksi.map((c, idx) => ({ ...c, _origIdx: idx })) 
     : [];
@@ -671,10 +625,7 @@ function renderGallery() {
     return matchRarity && matchSearch;
   });
 
-  if (countBadge) {
-    countBadge.innerText = `${filtered.length} Kartu`;
-  }
-
+  if (countBadge) countBadge.innerText = `${filtered.length} Kartu`;
   if (filtered.length === 0) {
     emptyBox.style.display = 'block';
     return;
@@ -723,7 +674,6 @@ function renderGallery() {
         const b = el.querySelector('.badge-new');
         if (b) b.remove();
       }
-
       openCardDetail({
         url: c.url,
         rarity: c.rarity,
@@ -746,7 +696,6 @@ function initGalleryControls() {
       renderGallery();
     });
   }
-
   const sortSelect = document.getElementById('sortSelect');
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
@@ -755,7 +704,6 @@ function initGalleryControls() {
       renderGallery();
     });
   }
-
   document.querySelectorAll('.filter-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       playSFX('click');
@@ -767,7 +715,7 @@ function initGalleryControls() {
   });
 }
 
-// 11. Modal Pratinjau Penuh & Simpan Gambar Tanpa Buka Tab Baru
+// 11. Modal Pratinjau & Simpan Gambar Langsung ke Disk (Anti-New-Tab)
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
@@ -780,17 +728,13 @@ function initCardDetailModal() {
       modal.style.display = 'none';
     });
   }
-
   if (modal) {
     modal.addEventListener('click', () => {
       modal.style.display = 'none';
     });
   }
-
   if (modalBox) {
-    modalBox.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+    modalBox.addEventListener('click', (e) => e.stopPropagation());
   }
 
   if (btnDownload) {
@@ -821,7 +765,7 @@ function openCardDetail(card) {
 }
 
 async function downloadCardImage(url, name) {
-  showToast('Mengunduh gambar...');
+  showToast('Menyiapkan download gambar...');
   const filename = `${name.replace(/\s+/g, '_')}_gacha.png`;
 
   try {
@@ -829,53 +773,24 @@ async function downloadCardImage(url, name) {
     if (!res.ok) throw new Error('Fetch gagal');
     const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
+    
     const a = document.createElement('a');
+    a.style.display = 'none';
     a.href = blobUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
-    showToast('Gambar berhasil diunduh! 💾');
-  } catch (e) {
-    // Fallback Canvas jika fetch terhambat CORS agar tetap langsung terunduh tanpa buka tab baru
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const blobUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
-          showToast('Gambar berhasil diunduh! 💾');
-        } else {
-          forceDirectAnchor(url, filename);
-        }
-      }, 'image/png');
-    };
-    img.onerror = () => forceDirectAnchor(url, filename);
-    img.src = url;
+    
+    // Beri jeda 2 detik sebelum revoke agar browser selesai mengunduh
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    }, 2000);
+    showToast('Gambar berhasil disimpan ke disk! 💾');
+  } catch (err) {
+    console.error('Download gagal:', err);
+    showToast('Gagal mengunduh gambar');
   }
-}
-
-function forceDirectAnchor(url, filename) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast('Gambar berhasil diunduh! 💾');
 }
 
 // 12. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
@@ -924,7 +839,6 @@ function initTabs() {
       const target = item.dataset.target;
       navItems.forEach(n => n.classList.remove('active'));
       panes.forEach(p => p.classList.remove('active'));
-
       item.classList.add('active');
       const pane = document.getElementById(target);
       if (pane) pane.classList.add('active');
