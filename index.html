@@ -45,18 +45,16 @@
       <button id="btnCloseInfo" class="btn-close-modal">✕</button>
       <h3>📜 Rincian & Aturan Gacha</h3>
 
-      <!-- Navigasi Sub-Tab Info -->
       <div class="info-nav">
         <button id="btnSubRate" class="info-tab-btn active">Peluang & Aturan</button>
-        <button id="btnSubDrop" class="info-tab-btn">Daftar Karakter (150+)</button>
+        <button id="btnSubDrop" class="info-tab-btn">Daftar Karakter Pool</button>
       </div>
 
-      <!-- Konten 1: Rate & Aturan -->
       <div id="infoContentRate" class="info-content-pane active">
         <div class="rate-table">
           <div class="rate-row rate-ssr">
             <span class="rate-badge">SSR</span>
-            <span class="rate-desc">Super Super Rare (Animasi GIF)</span>
+            <span class="rate-desc">Super Super Rare (Animasi Kartu)</span>
             <span class="rate-pct">5%</span>
           </div>
           <div class="rate-row rate-sr">
@@ -76,7 +74,7 @@
             <span class="rule-icon">🎯</span>
             <div>
               <strong>Sistem Pity (30 Tarikan)</strong>
-              <p>Jika dalam 29 tarikan belum dapat SSR, tarikan ke-30 dijamin 100% kartu SSR. Counter Pity otomatis kembali ke 0 begitu dapat SSR kapan pun.</p>
+              <p>Jika dalam 29 tarikan belum dapat SSR, tarikan ke-30 dijamin 100% kartu SSR. Counter Pity otomatis reset ke 0 begitu dapat SSR kapan saja.</p>
             </div>
           </div>
           <div class="rule-item">
@@ -90,16 +88,15 @@
             <span class="rule-icon">⭐</span>
             <div>
               <strong>Star Shard (Daur Ulang)</strong>
-              <p>Setiap tarikan kartu kembar (karakter & rarity sama) otomatis menghasilkan +1 Star Shard. 5 Star Shard bisa ditukar jadi +1 Tiket Gacha.</p>
+              <p>Tarikan kartu kembar (karakter & rarity sama) otomatis menghasilkan +1 Star Shard. 5 Star Shard bisa ditukar jadi +1 Tiket Gacha di tab Akun.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Konten 2: Drop List Karakter -->
       <div id="infoContentDrop" class="info-content-pane">
         <div class="drop-search-box">
-          <input type="text" id="inputSearchDrop" placeholder="🔍 Cari nama karakter / anime..." autocomplete="off">
+          <input type="text" id="inputSearchDrop" placeholder="🔍 Cari karakter / anime di pool..." autocomplete="off">
         </div>
         <div id="dropListContainer" class="drop-list-scroll"></div>
       </div>
@@ -250,8 +247,8 @@
             <span class="stat-lbl">Total Tarikan</span>
           </div>
           <div class="stat-box">
-            <span class="stat-val" id="statKarakterUnik">0/150</span>
-            <span class="stat-lbl">Karakter Unik</span>
+            <span class="stat-val" id="statKarakterUnik">0/40</span>
+            <span class="stat-lbl">Koleksi Unik</span>
           </div>
           <div class="stat-box">
             <span class="stat-val rate-ssr" id="statSSRRate">0%</span>
