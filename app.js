@@ -3,6 +3,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeaj
 let currentUser = JSON.parse(localStorage.getItem('gacha_user') || 'null');
 let deferredPrompt = null;
 let isFlipping = false;
+let currentFilter = 'all';
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
@@ -151,15 +152,24 @@ function initPWA() {
   const btnNotif = document.getElementById('btnIzinNotif');
   if (btnNotif) {
     btnNotif.addEventListener('click', async () => {
-      if (!('Notification' in window)) return showToast('Browser tidak mendukung notifikasi');
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        showToast('Notifikasi tiket & gacha aktif! 🔔');
-        fireTicketNotification('Notifikasi Aktif! 🔔', 'Kamu akan menerima pemberitahuan saat tiket reset atau dapat kartu langka!');
-      } else {
-        showToast('Izin notifikasi ditolak.');
-      }
+      await requestNotificationDirect();
     });
+  }
+}
+
+// Fungsi Permintaan Izin Notifikasi Otomatis
+async function requestNotificationDirect() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') return;
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      showToast('Notifikasi tiket & gacha aktif! 🔔');
+      fireTicketNotification('Notifikasi Aktif! 🔔', 'Pemberitahuan tiket harian & kartu langka siap dikirim!');
+    }
+  } catch (err) {
+    console.warn('Izin notifikasi ditolak/gagal:', err);
   }
 }
 
@@ -203,7 +213,7 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// 4. Autentikasi Akun
+// 4. Autentikasi Akun (Otomatis Minta Izin Notifikasi)
 const btnAuth = document.getElementById('btnAuthSubmit');
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
@@ -215,6 +225,9 @@ if (btnAuth) {
       errBox.innerText = 'Username wajib diisi & PIN harus 4 digit angka!';
       return;
     }
+
+    // Minta izin notifikasi langsung dari interaksi klik tombol login
+    requestNotificationDirect();
 
     errBox.innerText = '';
     btnAuth.disabled = true;
@@ -284,7 +297,7 @@ function renderUI() {
   if (headerUser) headerUser.innerText = `@${currentUser.username}`;
   if (profileUser) profileUser.innerText = `@${currentUser.username}`;
   if (txtTiket) txtTiket.innerText = currentUser.tickets;
-  renderGallery('all');
+  renderGallery(currentFilter);
 }
 
 // 6. Tarik Gacha + Notifikasi Khusus SR / SSR
@@ -391,15 +404,22 @@ if (cardWrapper) {
   });
 }
 
-// 7. Album Galeri Koleksi
+// 7. Album Galeri Koleksi (Angka Berubah Dinamis Mengikuti Filter)
 function renderGallery(filter = 'all') {
+  currentFilter = filter;
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
+  const countBadge = document.getElementById('txtKoleksiCount');
   if (!container || !emptyBox) return;
 
   container.innerHTML = '';
   const cards = (currentUser && currentUser.koleksi) ? currentUser.koleksi : [];
   const filtered = filter === 'all' ? cards : cards.filter(c => c.rarity === filter);
+
+  // Perbarui Angka Jumlah Koleksi Sesuai Filter
+  if (countBadge) {
+    countBadge.innerText = `${filtered.length} Kartu`;
+  }
 
   if (filtered.length === 0) {
     emptyBox.style.display = 'block';
@@ -493,7 +513,7 @@ function initTabs() {
       const pane = document.getElementById(target);
       if (pane) pane.classList.add('active');
 
-      if (target === 'tabGaleri') renderGallery('all');
+      if (target === 'tabGaleri') renderGallery(currentFilter);
     });
   });
 
