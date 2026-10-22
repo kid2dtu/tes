@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <title>Anime Gacha Harian</title>
+  <meta name="referrer" content="no-referrer">
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="apple-touch-icon" href="/icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b0f19">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <canvas id="fxCanvas"></canvas>
+
+  <!-- Modal Auth -->
+  <div id="modalAuth" class="modal-overlay">
+    <div class="modal-card">
+      <div class="auth-icon">✨</div>
+      <h2>Masuk ke Akun</h2>
+      <p class="auth-desc">Ketik username dan 4 digit PIN kamu untuk mulai gacha.</p>
+      
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="authUsername" placeholder="contoh: elin" autocomplete="off" autocapitalize="none">
+      </div>
+
+      <div class="form-group">
+        <label>PIN (4 Digit Angka)</label>
+        <input type="password" id="authPin" maxlength="4" placeholder="••••" inputmode="numeric">
+      </div>
+
+      <button id="btnAuthSubmit" class="btn-primary">Masuk / Daftar</button>
+      <div id="authError" class="auth-error"></div>
+    </div>
+  </div>
+
+  <!-- Modal Info Rate & Pool -->
+  <div id="modalGachaInfo" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-info-card">
+      <button id="btnCloseInfo" class="btn-close-modal">✕</button>
+      <h3>📜 Rincian & Aturan Gacha</h3>
+      
+      <div class="info-nav">
+        <button id="btnSubRate" class="info-tab-btn active">Peluang & Aturan</button>
+        <button id="btnSubDrop" class="info-tab-btn">Daftar Karakter Pool</button>
+      </div>
+
+      <div id="infoContentRate" class="info-content-pane active">
+        <div class="rate-table">
+          <div class="rate-row rate-ssr">
+            <span class="rate-badge">SSR</span>
+            <span class="rate-desc">Super Super Rare (Karakter Pilihan)</span>
+            <span class="rate-pct">5%</span>
+          </div>
+          <div class="rate-row rate-sr">
+            <span class="rate-badge">SR</span>
+            <span class="rate-desc">Super Rare</span>
+            <span class="rate-pct">25%</span>
+          </div>
+          <div class="rate-row rate-r">
+            <span class="rate-badge">R</span>
+            <span class="rate-desc">Rare (Standar)</span>
+            <span class="rate-pct">70%</span>
+          </div>
+        </div>
+
+        <div class="rules-list">
+          <div class="rule-item">
+            <span class="rule-icon">🎯</span>
+            <div>
+              <strong>Sistem Pity (30 Tarikan)</strong>
+              <p>Tarikan ke-30 otomatis 100% SSR jika belum dapat SSR dalam 29 tarikan.</p>
+            </div>
+          </div>
+          <div class="rule-item">
+            <span class="rule-icon">🎟️</span>
+            <div>
+              <strong>Reset Tiket Harian</strong>
+              <p>10 Tiket gratis otomatis diisi ulang setiap pukul 00:00 WIB.</p>
+            </div>
+          </div>
+          <div class="rule-item">
+            <span class="rule-icon">⭐</span>
+            <div>
+              <strong>Star Shard</strong>
+              <p>Kartu kembar menghasilkan +1 Star Shard. 5 Shard bisa ditukar jadi +1 Tiket.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="infoContentDrop" class="info-content-pane">
+        <div class="drop-search-box">
+          <input type="text" id="inputSearchDrop" placeholder="🔍 Cari karakter..." autocomplete="off">
+        </div>
+        <div id="dropListContainer" class="drop-list-scroll"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detail Kartu -->
+  <div id="modalCardDetail" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-detail-card">
+      <button id="btnCloseDetail" class="btn-close-modal">✕</button>
+      <div class="detail-badge" id="detailRarity">SSR</div>
+      <div class="detail-img-box">
+        <img id="detailImg" src="" referrerpolicy="no-referrer" alt="Detail Kartu">
+      </div>
+      <div class="detail-info">
+        <h3 id="detailCharacter">Nama Karakter</h3>
+        <p class="detail-anime" id="detailAnime">Anime: Judul Seri</p>
+        <div class="detail-meta">
+          <span>🎨 <span id="detailArtist">Artis</span></span>
+          <span>🕒 <span id="detailDate">Waktu Diperoleh</span></span>
+        </div>
+        <button id="btnDownloadCard" class="btn-download">💾 Simpan Gambar ke Disk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo-sparkle">✦</span>
+      <h1>AnimeGacha</h1>
+    </div>
+    <div class="user-pill" id="btnBukaAkun">
+      <span id="headerUsername">Memuat...</span>
+    </div>
+  </header>
+
+  <!-- Konten Utama -->
+  <main class="app-container">
+    
+    <!-- Tab 1: Meja Gacha -->
+    <section id="tabGacha" class="tab-pane active">
+      <div class="ticket-status-card">
+        <div class="ticket-info">
+          <span class="label">Sisa Tiket Harian</span>
+          <div class="ticket-count"><span id="txtTiket">0</span> <small>/ 10 🎟️</small></div>
+        </div>
+        <div class="reset-countdown">
+          <span class="label">Reset Tiket</span>
+          <span id="txtCountdown" class="timer">--:--:--</span>
+        </div>
+      </div>
+
+      <div class="pity-card">
+        <div class="pity-header">
+          <div class="pity-title-group">
+            <span class="pity-label">✨ Pity SSR (Jaminan 30)</span>
+            <button id="btnBukaInfoGacha" class="btn-mini-info" type="button">ℹ️ Rincian Rate</button>
+          </div>
+          <span id="txtPityCount" class="pity-number">0 / 30</span>
+        </div>
+        <div class="pity-bar-bg">
+          <div id="pityBarFill" class="pity-bar-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <div class="card-stage">
+        <div class="card-3d" id="kartuWrapper">
+          <div class="card-face card-back">
+            <div class="card-inner-pattern">
+              <span class="card-core-symbol">✦</span>
+              <p>TAP UNTUK BUKA</p>
+            </div>
+          </div>
+          <div class="card-face card-front" id="kartuDepan">
+            <div class="rarity-badge" id="kartuRarity">SSR</div>
+            <div class="img-wrapper">
+              <img id="kartuImg" src="" referrerpolicy="no-referrer" alt="Anime Card">
+            </div>
+            <div class="card-caption">
+              <h3 id="kartuAnime">Nama Karakter</h3>
+              <p id="kartuArtist">Artist: -</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-box">
+        <button id="btnTarikGacha" class="btn-gacha">
+          <span>Tarik Gacha (1 Tiket) ✨</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Tab 2: Album Galeri -->
+    <section id="tabGaleri" class="tab-pane">
+      <div class="gallery-header">
+        <div class="gallery-title-wrap">
+          <h2>Album Koleksi</h2>
+          <span id="txtKoleksiCount" class="badge-count">0 Kartu</span>
+        </div>
+        
+        <div class="search-box">
+          <input type="text" id="inputSearchGaleri" placeholder="🔍 Cari karakter..." autocomplete="off">
+        </div>
+
+        <div class="gallery-controls">
+          <div class="rarity-filters">
+            <button class="filter-chip active" data-filter="all">Semua</button>
+            <button class="filter-chip" data-filter="SSR">SSR</button>
+            <button class="filter-chip" data-filter="SR">SR</button>
+            <button class="filter-chip" data-filter="R">R</button>
+          </div>
+
+          <select id="sortSelect" class="sort-dropdown">
+            <option value="date">Waktu Diperoleh</option>
+            <option value="name">Nama (A-Z)</option>
+            <option value="rarity">Rarity (SSR - R)</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="gridGaleri" class="gallery-grid"></div>
+      
+      <div id="galeriKosong" class="empty-state">
+        <p>Belum ada kartu di koleksi kamu. Ayo tarik gacha pertamamu!</p>
+      </div>
+    </section>
+
+    <!-- Tab 3: Pengaturan Akun -->
+    <section id="tabAkun" class="tab-pane">
+      <div class="profile-card">
+        <div class="profile-avatar">👤</div>
+        <h2 id="profileUsername">Username</h2>
+        <span class="profile-badge">Akun Cloud Google Sheets</span>
+      </div>
+
+      <div class="stats-card">
+        <h4>📊 Statistik Keberuntungan</h4>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-val" id="statTotalTarik">0</span>
+            <span class="stat-lbl">Total Tarikan</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val" id="statKarakterUnik">0</span>
+            <span class="stat-lbl">Koleksi Unik</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val rate-ssr" id="statSSRRate">0%</span>
+            <span class="stat-lbl">SSR Rate</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val rate-sr" id="statSRRate">0%</span>
+            <span class="stat-lbl">SR Rate</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="shards-card">
+        <div class="shards-header">
+          <div>
+            <h4>⭐ Star Shards</h4>
+            <p>Dapat +1 Shard tiap kali narik kartu kembar.</p>
+          </div>
+          <div class="shards-badge">
+            <span id="txtShardCount">0</span> ⭐
+          </div>
+        </div>
+        <button id="btnTukarShard" class="btn-shards">Tukar 5 Shard ➔ +1 Tiket Gacha 🎟️</button>
+      </div>
+
+      <div class="settings-list">
+        <div class="settings-item">
+          <div>
+            <h4>Notifikasi Tiket (00:00 WIB)</h4>
+            <p>Pemberitahuan otomatis saat tiket harian terisi.</p>
+          </div>
+          <button id="btnIzinNotif" class="btn-secondary">Aktifkan</button>
+        </div>
+
+        <button id="btnLogout" class="btn-danger">Keluar dari Akun</button>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-target="tabGacha">
+      <span class="nav-icon">🎰</span>
+      <span class="nav-label">Gacha</span>
+    </button>
+    <button class="nav-item" data-target="tabGaleri">
+      <span class="nav-icon">🎴</span>
+      <span class="nav-label">Koleksi</span>
+    </button>
+    <button class="nav-item" data-target="tabAkun">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Akun</span>
+    </button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js?v=5"></script>
+</body>
+</html>
