@@ -62,6 +62,56 @@ function updateNotifStatusUI(isEnabled) {
   }
 }
 
+// 2. PENGECEK NOTIFIKASI PERSONAL & BROADCAST DARI ADMIN
+async function checkPendingNotifications() {
+  if (!currentUser || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+  try {
+    const res = await fetch(`${API_URL}?action=check_notifications&username=${encodeURIComponent(currentUser.username)}`);
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      const reg = await navigator.serviceWorker.ready;
+
+      // A. Notifikasi Personal (Misal Tiket Diubah Admin)
+      if (data.user_notif) {
+        reg.showNotification('AnimeGacha - Tiket Diperbarui!', {
+          body: data.user_notif,
+          icon: '/icon.png',
+          badge: '/icon.png'
+        });
+        // Segarkan data user di layar
+        refreshCurrentUserData();
+      }
+
+      // B. Notifikasi Broadcast ke Semua User
+      if (data.announcement) {
+        const lastSeen = localStorage.getItem('last_seen_announcement');
+        if (lastSeen !== data.announcement.id) {
+          reg.showNotification(data.announcement.title, {
+            body: data.announcement.message,
+            icon: '/icon.png',
+            badge: '/icon.png'
+          });
+          localStorage.setItem('last_seen_announcement', data.announcement.id);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Gagal mengecek notifikasi:', err);
+  }
+}
+
+async function refreshCurrentUserData() {
+  const pin = localStorage.getItem('gacha_pin');
+  if (currentUser && pin) {
+    const res = await callAPI({ action: 'login', username: currentUser.username, pin: pin });
+    if (res.status === 'success') {
+      applyUserData(res.user, res.inventory);
+    }
+  }
+}
+
 // Helper API Google Apps Script
 async function callAPI(payload) {
   try {
@@ -75,7 +125,7 @@ async function callAPI(payload) {
   }
 }
 
-// 2. INITIAL LOAD
+// 3. INITIAL LOAD
 window.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupFilters();
@@ -101,9 +151,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   } else {
     document.getElementById('authModal').classList.remove('hidden');
   }
+
+  // Cek notifikasi berkala tiap 45 detik
+  setInterval(checkPendingNotifications, 45000);
 });
 
-// 3. LOGIN & REGISTER
+// 4. LOGIN & REGISTER
 document.getElementById('btnLogin').addEventListener('click', async () => {
   const username = document.getElementById('authUsername').value.trim();
   const pin = document.getElementById('authPin').value.trim();
@@ -124,6 +177,7 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     document.getElementById('authModal').classList.add('hidden');
     errBox.textContent = '';
     setupNotificationAuto(username);
+    setTimeout(checkPendingNotifications, 2000);
   } else {
     errBox.textContent = res.message;
   }
@@ -135,6 +189,7 @@ async function loginUser(username, pin) {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     setupNotificationAuto(username);
+    setTimeout(checkPendingNotifications, 2000);
   } else {
     localStorage.clear();
     document.getElementById('authModal').classList.remove('hidden');
@@ -157,7 +212,7 @@ function applyUserData(user, inventory) {
   renderAlbum();
 }
 
-// 4. TARIK GACHA
+// 5. TARIK GACHA
 const btnPull = document.getElementById('btnPull');
 const gachaCard = document.getElementById('gachaCard');
 
@@ -212,7 +267,7 @@ gachaCard.addEventListener('click', () => {
   gachaCard.classList.toggle('flipped');
 });
 
-// 5. ALBUM KOLEKSI
+// 6. ALBUM KOLEKSI
 function updateAlbumCounts() {
   const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
   const ownedCards = cardPool.filter(c => ownedCardIds.includes(c.id));
@@ -289,7 +344,7 @@ function setupFilters() {
   });
 }
 
-// 6. DETAIL MODAL & SISTEM UNDUH MULTI-LAPIS ANTI-GAGAL
+// 7. DETAIL MODAL & UNDUH
 function openCardDetail(card) {
   activeSelectedCard = card;
   document.getElementById('modalRarityBadge').textContent = card.rarity;
@@ -331,7 +386,6 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
     }, 1500);
   }
 
-  // Lapisan 1: Fresh Direct Fetch (Bypass browser disk cache)
   async function tryDirectFetch() {
     const fetchUrl = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'download=1';
     const res = await fetch(fetchUrl, { mode: 'cors' });
@@ -341,7 +395,6 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
     return true;
   }
 
-  // Lapisan 2: Gambar ke Canvas dengan atribut crossOrigin
   function tryCanvasDownload() {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -370,7 +423,6 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
     });
   }
 
-  // Lapisan 3: Multi-proxy CORS
   async function tryProxyFetch() {
     const proxies = [
       `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`,
@@ -393,17 +445,10 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
 
   try {
     let success = false;
-
-    try {
-      success = await tryDirectFetch();
-    } catch (e) {}
-
+    try { success = await tryDirectFetch(); } catch (e) {}
     if (!success) {
-      try {
-        success = await tryCanvasDownload();
-      } catch (e) {}
+      try { success = await tryCanvasDownload(); } catch (e) {}
     }
-
     if (!success) {
       success = await tryProxyFetch();
     }
@@ -430,7 +475,7 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
   }
 });
 
-// 7. MODAL INFO ATURAN & PREVIEW SSR
+// 8. MODAL INFO ATURAN & PREVIEW SSR
 function setupRulesModal() {
   document.getElementById('btnOpenRules').addEventListener('click', () => {
     document.getElementById('rulesModal').classList.remove('hidden');
@@ -456,7 +501,7 @@ function renderSSRPoolPreview() {
   });
 }
 
-// 8. TUKAR STAR SHARD & STATISTIK
+// 9. TUKAR STAR SHARD & STATISTIK
 document.getElementById('btnTradeShard').addEventListener('click', async () => {
   if (currentUser.shards < 5) {
     alert('Star Shard tidak cukup (minimal 5).');
