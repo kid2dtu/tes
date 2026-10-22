@@ -44,6 +44,8 @@ function sendWelcomeNotification(username) {
 function updateNotifStatusUI(isEnabled) {
   const container = document.getElementById('notifBadgeContainer');
   const text = document.getElementById('notifStatusText');
+  if (!container || !text) return;
+
   if (isEnabled) {
     container.innerHTML = '<span class="badge-notif-active">✅ Notifikasi Aktif</span>';
     text.textContent = 'Pengingat tiket otomatis setiap pukul 00:00 WIB.';
@@ -210,7 +212,7 @@ gachaCard.addEventListener('click', () => {
   gachaCard.classList.toggle('flipped');
 });
 
-// 5. ALBUM KOLEKSI: FILTER, URUTAN, & ANGKA REALTIME
+// 5. ALBUM KOLEKSI
 function updateAlbumCounts() {
   const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
   const ownedCards = cardPool.filter(c => ownedCardIds.includes(c.id));
@@ -287,7 +289,7 @@ function setupFilters() {
   });
 }
 
-// 6. DETAIL MODAL & DOWNLOAD GAMBAR ASLI KE DISK (DENGAN CORS PROXY)
+// 6. DETAIL MODAL & SISTEM UNDUH MULTI-LAPIS ANTI-GAGAL
 function openCardDetail(card) {
   activeSelectedCard = card;
   document.getElementById('modalRarityBadge').textContent = card.rarity;
@@ -303,40 +305,128 @@ document.getElementById('btnCloseModal').addEventListener('click', () => {
   document.getElementById('cardModal').classList.add('hidden');
 });
 
-// Mengunduh langsung ke disk/galeri tanpa membuka tab baru
 document.getElementById('btnDownloadCard').addEventListener('click', async () => {
   if (!activeSelectedCard) return;
 
   const btn = document.getElementById('btnDownloadCard');
+  const originalText = '📥 Unduh Kartu ke Perangkat';
   btn.textContent = '⏳ Mengunduh...';
+  btn.disabled = true;
 
   const cleanName = activeSelectedCard.name.replace(/[^a-zA-Z0-9_-]/g, '_');
   const filename = `${cleanName}_${activeSelectedCard.rarity}.jpg`;
+  const rawUrl = activeSelectedCard.image_url;
 
-  try {
-    // Lewati pemblokiran CORS AniList menggunakan proxy gambar resmi wsrv.nl
-    const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(activeSelectedCard.image_url)}&output=jpg`;
-    const res = await fetch(proxyUrl);
-    
-    if (!res.ok) throw new Error('Proxy error');
-    
-    const blob = await res.blob();
+  function triggerBlobDownload(blob) {
     const blobUrl = window.URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
+    a.style.display = 'none';
     a.href = blobUrl;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 1500);
+  }
 
-    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1500);
+  // Lapisan 1: Fresh Direct Fetch (Bypass browser disk cache)
+  async function tryDirectFetch() {
+    const fetchUrl = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'download=1';
+    const res = await fetch(fetchUrl, { mode: 'cors' });
+    if (!res.ok) throw new Error('Fetch error');
+    const blob = await res.blob();
+    triggerBlobDownload(blob);
+    return true;
+  }
 
-    btn.textContent = '✅ Berhasil Diunduh!';
-    setTimeout(() => { btn.textContent = '📥 Unduh Kartu ke Perangkat'; }, 2000);
+  // Lapisan 2: Gambar ke Canvas dengan atribut crossOrigin
+  function tryCanvasDownload() {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || img.width;
+          canvas.height = img.naturalHeight || img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              triggerBlobDownload(blob);
+              resolve(true);
+            } else {
+              reject(new Error('Canvas export failed'));
+            }
+          }, 'image/jpeg', 0.95);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      img.onerror = () => reject(new Error('Img load failed'));
+      img.src = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'cv=1';
+    });
+  }
+
+  // Lapisan 3: Multi-proxy CORS
+  async function tryProxyFetch() {
+    const proxies = [
+      `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`,
+      `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&output=jpg`
+    ];
+
+    for (const proxy of proxies) {
+      try {
+        const res = await fetch(proxy);
+        if (res.ok) {
+          const blob = await res.blob();
+          triggerBlobDownload(blob);
+          return true;
+        }
+      } catch (e) {}
+    }
+    throw new Error('All proxies failed');
+  }
+
+  try {
+    let success = false;
+
+    try {
+      success = await tryDirectFetch();
+    } catch (e) {}
+
+    if (!success) {
+      try {
+        success = await tryCanvasDownload();
+      } catch (e) {}
+    }
+
+    if (!success) {
+      success = await tryProxyFetch();
+    }
+
+    if (success) {
+      btn.textContent = '✅ Berhasil Diunduh!';
+    } else {
+      throw new Error('Gagal');
+    }
   } catch (err) {
-    btn.textContent = '❌ Gagal Mengunduh';
-    setTimeout(() => { btn.textContent = '📥 Unduh Kartu ke Perangkat'; }, 2000);
+    const a = document.createElement('a');
+    a.href = rawUrl;
+    a.target = '_blank';
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    btn.textContent = '↗️ Dibuka di Tab Baru';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 2500);
   }
 });
 
