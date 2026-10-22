@@ -121,13 +121,26 @@
           <h2>Album Koleksi</h2>
           <span id="txtKoleksiCount" class="badge-count">0 Kartu</span>
         </div>
-        <div class="rarity-filters">
-          <button class="filter-chip active" data-filter="all">Semua</button>
-          <button class="filter-chip" data-filter="SSR">SSR</button>
-          <button class="filter-chip" data-filter="SR">SR</button>
-          <button class="filter-chip" data-filter="R">R</button>
+        
+        <!-- Bar Kontrol: Filter Rarity + Dropdown Sort -->
+        <div class="gallery-controls">
+          <div class="rarity-filters">
+            <button class="filter-chip active" data-filter="all">Semua</button>
+            <button class="filter-chip" data-filter="SSR">SSR</button>
+            <button class="filter-chip" data-filter="SR">SR</button>
+            <button class="filter-chip" data-filter="R">R</button>
+          </div>
+          
+          <div class="sort-box">
+            <select id="sortSelect" class="sort-dropdown">
+              <option value="date">Tgl (Terbaru)</option>
+              <option value="name">Nama (A-Z)</option>
+              <option value="rarity">Rarity (SSR - R)</option>
+            </select>
+          </div>
         </div>
       </div>
+      
       <div id="gridGaleri" class="gallery-grid"></div>
       <div id="galeriKosong" class="empty-state">
         <p>Belum ada kartu di koleksi kamu. Ayo tarik gacha pertamamu!</p>
