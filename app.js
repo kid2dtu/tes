@@ -12,7 +12,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(console.error);
 }
 
-// 1. AUTO TRIGGER NOTIFIKASI SAAT LOGIN (Fitur 5)
+// 1. AUTO TRIGGER NOTIFIKASI SAAT LOGIN
 async function setupNotificationAuto(username) {
   if (!('Notification' in window)) return;
 
@@ -80,7 +80,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupSort();
   setupRulesModal();
 
-  // Load pool kartu dari GAS
   try {
     const poolRes = await fetch(`${API_URL}?action=get_pool`);
     const poolJson = await poolRes.json();
@@ -122,8 +121,6 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     errBox.textContent = '';
-    
-    // Auto-trigger notifikasi harian
     setupNotificationAuto(username);
   } else {
     errBox.textContent = res.message;
@@ -213,7 +210,7 @@ gachaCard.addEventListener('click', () => {
   gachaCard.classList.toggle('flipped');
 });
 
-// 5. ALBUM KOLEKSI: FILTER, URUTAN, & ANGKA REALTIME (Fitur 3)
+// 5. ALBUM KOLEKSI: FILTER, URUTAN, & ANGKA REALTIME
 function updateAlbumCounts() {
   const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
   const ownedCards = cardPool.filter(c => ownedCardIds.includes(c.id));
@@ -237,14 +234,11 @@ function renderAlbum() {
   const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
   let cardsToDisplay = cardPool.filter(c => ownedCardIds.includes(c.id));
 
-  // Terapkan Filter
   if (currentFilter !== 'ALL') {
     cardsToDisplay = cardsToDisplay.filter(c => c.rarity === currentFilter);
   }
 
-  // Terapkan Urutan
   if (currentSort === 'recent') {
-    // Berdasarkan index inventory terakhir
     cardsToDisplay.sort((a, b) => {
       const idxA = userInventory.map(x => x.card_id).lastIndexOf(a.id);
       const idxB = userInventory.map(x => x.card_id).lastIndexOf(b.id);
@@ -293,7 +287,7 @@ function setupFilters() {
   });
 }
 
-// 6. DETAIL MODAL & DOWNLOAD GAMBAR KE DISK (Fitur 4)
+// 6. DETAIL MODAL & DOWNLOAD GAMBAR ASLI KE DISK (DENGAN CORS PROXY)
 function openCardDetail(card) {
   activeSelectedCard = card;
   document.getElementById('modalRarityBadge').textContent = card.rarity;
@@ -309,35 +303,44 @@ document.getElementById('btnCloseModal').addEventListener('click', () => {
   document.getElementById('cardModal').classList.add('hidden');
 });
 
-// Fitur Download Kartu ke Penyimpanan
+// Mengunduh langsung ke disk/galeri tanpa membuka tab baru
 document.getElementById('btnDownloadCard').addEventListener('click', async () => {
   if (!activeSelectedCard) return;
 
   const btn = document.getElementById('btnDownloadCard');
   btn.textContent = '⏳ Mengunduh...';
 
+  const cleanName = activeSelectedCard.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const filename = `${cleanName}_${activeSelectedCard.rarity}.jpg`;
+
   try {
-    const res = await fetch(activeSelectedCard.image_url);
+    // Lewati pemblokiran CORS AniList menggunakan proxy gambar resmi wsrv.nl
+    const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(activeSelectedCard.image_url)}&output=jpg`;
+    const res = await fetch(proxyUrl);
+    
+    if (!res.ok) throw new Error('Proxy error');
+    
     const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
+    const blobUrl = window.URL.createObjectURL(blob);
+    
     const a = document.createElement('a');
-    a.href = url;
-    const cleanName = activeSelectedCard.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-    a.download = `${cleanName}_${activeSelectedCard.rarity}.jpg`;
+    a.href = blobUrl;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+
+    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1500);
+
     btn.textContent = '✅ Berhasil Diunduh!';
     setTimeout(() => { btn.textContent = '📥 Unduh Kartu ke Perangkat'; }, 2000);
   } catch (err) {
-    // Fallback jika direct fetch terhalang header cors
-    window.open(activeSelectedCard.image_url, '_blank');
-    btn.textContent = '📥 Unduh Kartu ke Perangkat';
+    btn.textContent = '❌ Gagal Mengunduh';
+    setTimeout(() => { btn.textContent = '📥 Unduh Kartu ke Perangkat'; }, 2000);
   }
 });
 
-// 7. MODAL INFO ATURAN & PREVIEW SSR (Fitur 1)
+// 7. MODAL INFO ATURAN & PREVIEW SSR
 function setupRulesModal() {
   document.getElementById('btnOpenRules').addEventListener('click', () => {
     document.getElementById('rulesModal').classList.remove('hidden');
