@@ -16,6 +16,16 @@ if (currentUser) {
   if (currentUser.shards === undefined) currentUser.shards = 0;
 }
 
+// Helper Proxy Gambar Anti-Blokir MyAnimeList (Error 403 bypass)
+function getSafeImageUrl(rawUrl) {
+  if (!rawUrl) return 'https://api.dicebear.com/7.x/bottts/svg?seed=AnimeCard';
+  if (rawUrl.includes('myanimelist.net')) {
+    const cleanUrl = rawUrl.replace(/^https?:\/\//i, '');
+    return `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&default=https://api.dicebear.com/7.x/bottts/svg?seed=Anime`;
+  }
+  return rawUrl;
+}
+
 // 1. Audio Synthesizer (SFX Bawaan Browser)
 let audioCtx = null;
 function getAudioContext() {
@@ -132,24 +142,34 @@ function triggerSSRConfetti() {
   render();
 }
 
-// 3. Engine Jikan API v4 (MyAnimeList Top Characters)
-// Fallback darurat jika Jikan sedang offline atau kena limit
+// 3. Fallback Pool Lengkap (Jika Jikan API limit/lambat)
 const FALLBACK_POOL = [
-  { character_name: 'Lelouch Lamperouge', anime_name: 'Code Geass', rarity: 'SSR', artist_name: 'Sunrise', url: 'https://cdn.myanimelist.net/images/characters/8/406163.jpg' },
-  { character_name: 'Levi Ackerman', anime_name: 'Attack on Titan', rarity: 'SSR', artist_name: 'WIT Studio', url: 'https://cdn.myanimelist.net/images/characters/2/241417.jpg' },
-  { character_name: 'Rem', anime_name: 'Re:Zero', rarity: 'SSR', artist_name: 'White Fox', url: 'https://cdn.myanimelist.net/images/characters/11/309442.jpg' },
-  { character_name: 'Rintarou Okabe', anime_name: 'Steins;Gate', rarity: 'SR', artist_name: 'White Fox', url: 'https://cdn.myanimelist.net/images/characters/6/123066.jpg' },
-  { character_name: 'Megumin', anime_name: 'KonoSuba', rarity: 'SR', artist_name: 'Studio Deen', url: 'https://cdn.myanimelist.net/images/characters/10/304381.jpg' },
-  { character_name: 'Anya Forger', anime_name: 'Spy × Family', rarity: 'R', artist_name: 'CloverWorks', url: 'https://cdn.myanimelist.net/images/characters/11/473809.jpg' }
+  // SSR
+  { character_name: 'Lelouch Lamperouge', anime_name: 'Code Geass', rarity: 'SSR', artist_name: 'Sunrise', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/8/406163.jpg') },
+  { character_name: 'Levi Ackerman', anime_name: 'Attack on Titan', rarity: 'SSR', artist_name: 'WIT Studio', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/2/241417.jpg') },
+  { character_name: 'Rem', anime_name: 'Re:Zero', rarity: 'SSR', artist_name: 'White Fox', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/11/309442.jpg') },
+  { character_name: 'Rintarou Okabe', anime_name: 'Steins;Gate', rarity: 'SSR', artist_name: 'White Fox', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/6/123066.jpg') },
+  // SR
+  { character_name: 'Megumin', anime_name: 'KonoSuba', rarity: 'SR', artist_name: 'Studio Deen', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/10/304381.jpg') },
+  { character_name: 'Killua Zoldyck', anime_name: 'Hunter x Hunter', rarity: 'SR', artist_name: 'Madhouse', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/2/327920.jpg') },
+  { character_name: 'Hachiman Hikigaya', anime_name: 'Oregairu', rarity: 'SR', artist_name: 'feel.', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/12/285706.jpg') },
+  { character_name: 'Kurisu Makise', anime_name: 'Steins;Gate', rarity: 'SR', artist_name: 'White Fox', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/9/131317.jpg') },
+  // R (Banyak variasi agar tidak kembar)
+  { character_name: 'Anya Forger', anime_name: 'Spy × Family', rarity: 'R', artist_name: 'CloverWorks', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/11/473809.jpg') },
+  { character_name: 'Chika Fujiwara', anime_name: 'Kaguya-sama', rarity: 'R', artist_name: 'A-1 Pictures', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/16/377317.jpg') },
+  { character_name: 'Asuna Yuuki', anime_name: 'Sword Art Online', rarity: 'R', artist_name: 'A-1 Pictures', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/15/264079.jpg') },
+  { character_name: 'Komi Shouko', anime_name: "Komi Can't Communicate", rarity: 'R', artist_name: 'OLM', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/14/451457.jpg') },
+  { character_name: 'Nijika Ijichi', anime_name: 'Bocchi the Rock!', rarity: 'R', artist_name: 'CloverWorks', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/16/490459.jpg') },
+  { character_name: 'Roxy Migurdia', anime_name: 'Mushoku Tensei', rarity: 'R', artist_name: 'Studio Bind', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/10/434857.jpg') },
+  { character_name: 'Fern', anime_name: 'Sousou no Frieren', rarity: 'R', artist_name: 'Madhouse', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/13/524854.jpg') },
+  { character_name: 'Miku Nakano', anime_name: '5-toubun no Hanayome', rarity: 'R', artist_name: 'Bibury', url: getSafeImageUrl('https://cdn.myanimelist.net/images/characters/4/374536.jpg') }
 ];
 
 async function fetchJikanPage(pageNumber) {
   const cacheKey = `jikan_v4_page_${pageNumber}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
-    try {
-      return JSON.parse(cached);
-    } catch (e) {}
+    try { return JSON.parse(cached); } catch (e) {}
   }
 
   try {
@@ -161,49 +181,57 @@ async function fetchJikanPage(pageNumber) {
       return json.data;
     }
   } catch (err) {
-    console.warn(`Gagal memuat Jikan halaman ${pageNumber}:`, err);
+    console.warn(`Jikan halaman ${pageNumber} ditunda:`, err);
   }
   return null;
 }
 
-// Background preload saat awal web dibuka agar tarikan gacha instan
 async function preloadJikanPool() {
-  await fetchJikanPage(1); // Page 1 = SSR Pool
-  await fetchJikanPage(2); // Page 2 = SR Pool
+  await fetchJikanPage(1);
+  setTimeout(() => fetchJikanPage(2), 1200);
 }
 
 async function rollJikanCard(targetRarity) {
   let targetPages = [];
-  if (targetRarity === 'SSR') {
-    targetPages = [1]; // Top 1 - 25 MAL
-  } else if (targetRarity === 'SR') {
-    targetPages = [2, 3, 4, 5]; // Top 26 - 125 MAL
-  } else {
-    targetPages = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // Top 126 - 375 MAL
-  }
+  if (targetRarity === 'SSR') targetPages = [1];
+  else if (targetRarity === 'SR') targetPages = [2, 3, 4, 5];
+  else targetPages = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
   const selectedPage = targetPages[Math.floor(Math.random() * targetPages.length)];
   const pageData = await fetchJikanPage(selectedPage);
 
   if (pageData && pageData.length > 0) {
     const raw = pageData[Math.floor(Math.random() * pageData.length)];
-    const img = raw.images?.jpg?.large_image_url || raw.images?.jpg?.image_url;
-    const cleanName = raw.name || 'Anime Character';
-    const subTitle = raw.name_kanji ? `${raw.name_kanji} (MAL Top #${raw.mal_id})` : 'MyAnimeList Top Series';
-    const favCount = raw.favorites ? `${Number(raw.favorites).toLocaleString('id-ID')} Favorit` : 'Official MAL';
-
+    const rawImg = raw.images?.jpg?.large_image_url || raw.images?.jpg?.image_url;
     return {
-      character_name: cleanName,
-      anime_name: subTitle,
+      character_name: raw.name || 'Karakter Anime',
+      anime_name: raw.name_kanji ? `${raw.name_kanji} (MAL #${raw.mal_id})` : 'Top MyAnimeList',
       rarity: targetRarity,
-      artist_name: favCount,
-      url: img
+      artist_name: raw.favorites ? `${Number(raw.favorites).toLocaleString('id-ID')} Favorit` : 'Official MAL',
+      url: getSafeImageUrl(rawImg)
     };
   }
 
-  // Jika koneksi internet down, ambil dari fallback
   const fallbacks = FALLBACK_POOL.filter(c => c.rarity === targetRarity);
   return fallbacks[Math.floor(Math.random() * fallbacks.length)] || FALLBACK_POOL[0];
+}
+
+// 4. Perbaikan Gambar Rusak di Koleksi Lama
+function repairBrokenCollection() {
+  if (!currentUser || !Array.isArray(currentUser.koleksi)) return;
+  let changed = false;
+
+  currentUser.koleksi.forEach(card => {
+    if (card.url && card.url.includes('myanimelist.net') && !card.url.includes('weserv.nl')) {
+      card.url = getSafeImageUrl(card.url);
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+    renderGallery();
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -216,6 +244,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (modalAuth) modalAuth.style.display = 'flex';
   } else {
     if (modalAuth) modalAuth.style.display = 'none';
+    repairBrokenCollection();
     renderUI();
     syncUserData();
   }
@@ -231,7 +260,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initGachaInfoModal();
 });
 
-// 4. Sinkronisasi Realtime
+// 5. Sinkronisasi Realtime
 function initSyncListener() {
   syncChannel.onmessage = (event) => {
     if (event.data && event.data.type === 'TICKET_UPDATED') {
@@ -259,7 +288,7 @@ function initSyncListener() {
   }, 5000);
 }
 
-// 5. Inisialisasi PWA & Notifikasi
+// 6. Inisialisasi PWA & Notifikasi
 function initPWA() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(console.error);
@@ -321,7 +350,7 @@ function fireTicketNotification(title, body) {
   }
 }
 
-// 6. Hitung Mundur Reset 00:00 WIB
+// 7. Hitung Mundur Reset 00:00 WIB
 function initCountdown() {
   let hasTriggeredMidnight = false;
   function updateTimer() {
@@ -348,7 +377,7 @@ function initCountdown() {
   setInterval(updateTimer, 1000);
 }
 
-// 7. Autentikasi Akun
+// 8. Autentikasi Akun
 const btnAuth = document.getElementById('btnAuthSubmit');
 if (btnAuth) {
   btnAuth.addEventListener('click', async () => {
@@ -385,6 +414,7 @@ if (btnAuth) {
         lastKnownTickets = result.tickets;
         localStorage.setItem('gacha_user', JSON.stringify(currentUser));
         document.getElementById('modalAuth').style.display = 'none';
+        repairBrokenCollection();
         renderUI();
         showToast(result.isNew ? 'Akun baru berhasil dibuat! 🎟️' : 'Selamat datang kembali!');
       } else {
@@ -399,7 +429,7 @@ if (btnAuth) {
   });
 }
 
-// 8. Sinkronisasi Data Server
+// 9. Sinkronisasi Data
 async function syncUserData() {
   if (!currentUser) return;
   try {
@@ -422,6 +452,7 @@ async function syncUserData() {
       currentUser.pity = currentUser.pity || 0;
       currentUser.shards = currentUser.shards || 0;
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
+      repairBrokenCollection();
       renderUI();
     }
   } catch (e) {
@@ -472,7 +503,7 @@ function renderStatsAndShards() {
   if (elShard) elShard.innerText = currentUser.shards || 0;
 }
 
-// 9. Tarik Gacha Realtime dari Jikan API
+// 10. Tarik Gacha Realtime
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -500,13 +531,9 @@ if (btnGacha) {
       showToast('🌟 PITY 30 TERCAPAI: JAMINAN SSR! 🌟');
     } else {
       const roll = Math.random() * 100;
-      if (roll <= 5) {
-        targetRarity = 'SSR';
-      } else if (roll <= 30) {
-        targetRarity = 'SR';
-      } else {
-        targetRarity = 'R';
-      }
+      if (roll <= 5) targetRarity = 'SSR';
+      else if (roll <= 30) targetRarity = 'SR';
+      else targetRarity = 'R';
     }
 
     const chosen = await rollJikanCard(targetRarity);
@@ -612,7 +639,7 @@ if (cardWrapper) {
   });
 }
 
-// 10. Album Galeri Koleksi
+// 11. Album Galeri Koleksi
 function renderGallery() {
   const container = document.getElementById('gridGaleri');
   const emptyBox = document.getElementById('galeriKosong');
@@ -661,7 +688,7 @@ function renderGallery() {
     el.className = `mini-card rarity-${c.rarity}`;
     el.innerHTML = `
       ${isNew ? '<span class="badge-new">NEW</span>' : ''}
-      <img src="${c.url}" loading="lazy" alt="${charName}">
+      <img src="${c.url}" loading="lazy" referrerpolicy="no-referrer" alt="${charName}">
       <div class="mini-card-info">
         <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
         <h4>${charName}</h4>
@@ -712,7 +739,7 @@ function initGalleryControls() {
   });
 }
 
-// 11. Modal Detail & Download Gambar
+// 12. Modal Detail & Download Gambar
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
@@ -793,7 +820,7 @@ async function downloadCardImage(url, name) {
   }
 }
 
-// 12. Modal Rincian Rate & Drop Pool
+// 13. Modal Rincian Rate & Drop Pool
 function initGachaInfoModal() {
   const modal = document.getElementById('modalGachaInfo');
   const btnBuka = document.getElementById('btnBukaInfoGacha');
@@ -862,7 +889,6 @@ function renderDropList(filterText = '') {
   container.innerHTML = '';
   const search = filterText.trim().toLowerCase();
 
-  // Ambil cache halaman yang sudah tersimpan di browser
   let pooled = [];
   for (let p = 1; p <= 15; p++) {
     const stored = localStorage.getItem(`jikan_v4_page_${p}`);
@@ -903,7 +929,7 @@ function renderDropList(filterText = '') {
   });
 }
 
-// 13. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
+// 14. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
 function initShardExchange() {
   const btnTukar = document.getElementById('btnTukarShard');
   if (!btnTukar) return;
@@ -936,7 +962,7 @@ function initShardExchange() {
   });
 }
 
-// 14. Navigasi Bawah & Logout
+// 15. Navigasi Bawah & Logout
 function initTabs() {
   const navItems = document.querySelectorAll('.nav-item');
   const panes = document.querySelectorAll('.tab-pane');
