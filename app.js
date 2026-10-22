@@ -99,9 +99,8 @@ window.addEventListener('DOMContentLoaded', () => {
   initSortListener();
 });
 
-// 1. Sinkronisasi Realtime Antar-Perangkat (Polling Cepat & Broadcast)
+// 1. Sinkronisasi Realtime Antar-Perangkat
 function initSyncListener() {
-  // Sinyal lokal (jika admin & web dibuka di perangkat yang sama)
   syncChannel.onmessage = (event) => {
     if (event.data && event.data.type === 'TICKET_UPDATED') {
       if (currentUser && currentUser.username === event.data.targetUser) {
@@ -115,7 +114,6 @@ function initSyncListener() {
     }
   };
 
-  // Cek server saat tab/PWA dibuka kembali atau disentuh
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && currentUser) {
       syncUserData();
@@ -126,7 +124,6 @@ function initSyncListener() {
     if (currentUser) syncUserData();
   });
 
-  // Auto-Polling berkala setiap 5 detik saat aplikasi sedang aktif di layar HP
   setInterval(() => {
     if (document.visibilityState === 'visible' && currentUser && !isFlipping) {
       syncUserData();
@@ -313,7 +310,7 @@ function renderUI() {
   renderGallery(currentFilter);
 }
 
-// 6. Tarik Gacha + Format Waktu Diperoleh Lengkap
+// 6. Tarik Gacha
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -379,7 +376,9 @@ if (btnGacha) {
 
       currentUser.tickets = Math.max(0, currentUser.tickets - 1);
       lastKnownTickets = currentUser.tickets;
-      currentUser.koleksi.unshift(newCard);
+      
+      // Simpan di akhir array agar seragam dengan database server
+      currentUser.koleksi.push(newCard);
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       document.getElementById('txtTiket').innerText = currentUser.tickets;
 
@@ -423,7 +422,7 @@ if (cardWrapper) {
   });
 }
 
-// 7. Album Galeri Koleksi (Filter & Sortir Dinamis)
+// 7. Album Galeri Koleksi (Terbaru Selalu Paling Atas)
 function renderGallery(filter = 'all') {
   currentFilter = filter;
   const container = document.getElementById('gridGaleri');
@@ -458,9 +457,16 @@ function renderGallery(filter = 'all') {
     } else if (currentSort === 'rarity') {
       const rankDiff = (rarityRank[b.rarity] || 0) - (rarityRank[a.rarity] || 0);
       if (rankDiff !== 0) return rankDiff;
-      return a._origIdx - b._origIdx;
+      if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) {
+        return b.timestamp - a.timestamp;
+      }
+      return b._origIdx - a._origIdx;
     } else {
-      return a._origIdx - b._origIdx;
+      // Default: Waktu Diperoleh Terbaru Selalu di Paling Atas
+      if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) {
+        return b.timestamp - a.timestamp;
+      }
+      return b._origIdx - a._origIdx;
     }
   });
 
