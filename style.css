@@ -111,18 +111,22 @@ body {
 }
 
 /* =========================================
-   DESAIN CARD SLEEVE & FLIP 3D (Fitur 2)
+   PERBAIKAN KARTU 3D & POSISI FLIP
    ========================================= */
 .card-stage {
   perspective: 1000px;
   display: flex;
   justify-content: center;
-  margin: 26px 0;
+  align-items: center;
+  margin: 26px auto;
+  width: 230px;
+  height: 335px;
 }
 
 .card {
-  width: 230px;
-  height: 335px;
+  width: 100%;
+  height: 100%;
+  position: relative;
   cursor: pointer;
 }
 
@@ -140,20 +144,23 @@ body {
   transform: rotateY(180deg);
 }
 
+/* Kunci penempatan absolut di sudut (0,0) agar tidak melorot */
 .card-front, .card-back {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   border-radius: 16px;
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   overflow: hidden;
 }
 
-/* Tampilan Card Sleeve Anime Tarot */
+/* Sisi Belakang: Sleeve Tarot */
 .tarot-back {
   background: radial-gradient(circle at center, #1b2038 0%, #0c0f1c 100%);
   border: 2px solid #f59e0b;
-  position: relative;
 }
 
 .sleeve-border {
@@ -204,7 +211,6 @@ body {
   margin-top: 4px;
 }
 
-/* Kilap Hologram */
 .shimmer-sweep {
   position: absolute;
   top: -50%;
@@ -231,7 +237,7 @@ body {
   50% { transform: scale(1.08); opacity: 1; text-shadow: 0 0 24px rgba(245, 158, 11, 1); }
 }
 
-/* Sisi Depan Kartu */
+/* Sisi Depan Kartu: Hasil Tarikan */
 .card-back {
   background: #151824;
   transform: rotateY(180deg);
@@ -242,6 +248,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .card-info-bottom {
@@ -286,9 +293,7 @@ body {
 .btn-download { width: 100%; padding: 12px; background: #10b981; color: white; font-size: 0.95rem; margin-top: 14px; }
 .btn-gacha:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* =========================================
-   ALBUM KOLEKSI: FILTER & SORT (Fitur 3)
-   ========================================= */
+/* Album Koleksi */
 .album-controls {
   display: flex;
   flex-direction: column;
@@ -485,9 +490,7 @@ body {
   cursor: pointer;
 }
 
-/* =========================================
-   DETAIL MODAL UTUH & TIDAK KEPOTONG (Fitur 4)
-   ========================================= */
+/* Modal Detail Kartu */
 .card-detail-img-wrapper {
   position: relative;
   width: 100%;
@@ -505,7 +508,7 @@ body {
 .card-detail-img-wrapper img {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Utuh, proporsional, dan tidak terpotong */
+  object-fit: contain;
 }
 
 .card-detail-meta {
@@ -530,7 +533,7 @@ body {
   margin-top: 4px;
 }
 
-/* Modal Rules & Pool Info */
+/* Modal Info Aturan */
 .rules-box {
   max-height: 80vh;
   display: flex;
