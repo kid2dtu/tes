@@ -14,7 +14,7 @@ if (currentUser) {
   if (currentUser.shards === undefined) currentUser.shards = 0;
 }
 
-// 1. Audio SFX
+// 1. Audio Synthesizer
 let audioCtx = null;
 function playSFX(type) {
   try {
@@ -79,108 +79,114 @@ function triggerSSRConfetti() {
   render();
 }
 
-// 3. Engine Gambar & Auto-Repair AniList
-async function fetchRealImageByName(charName) {
-  const cacheKey = `img_${charName.toLowerCase().replace(/\s+/g, '_')}`;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) return cached;
-  try {
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        query: `query ($s: String) { Character(search: $s) { image { large } } }`,
-        variables: { s: charName }
-      })
-    });
-    const json = await res.json();
-    const url = json?.data?.Character?.image?.large;
-    if (url) {
-      localStorage.setItem(cacheKey, url);
-      return url;
-    }
-  } catch (err) {}
-  return null;
-}
+// 3. Database Roster Karakter & Tag Safebooru
+const GACHA_ROSTER = [
+  // --- SSR (5%) ---
+  { character_name: 'Hu Tao', anime_name: 'Genshin Impact', rarity: 'SSR', tag: 'hu_tao_(genshin_impact)' },
+  { character_name: 'Raiden Shogun', anime_name: 'Genshin Impact', rarity: 'SSR', tag: 'raiden_shogun_(genshin_impact)' },
+  { character_name: 'Furina', anime_name: 'Genshin Impact', rarity: 'SSR', tag: 'furina_(genshin_impact)' },
+  { character_name: 'Frieren', anime_name: 'Sousou no Frieren', rarity: 'SSR', tag: 'frieren' },
+  { character_name: 'Rem', anime_name: 'Re:Zero', rarity: 'SSR', tag: 'rem_(re:zero)' },
+  { character_name: 'Megumin', anime_name: 'KonoSuba', rarity: 'SSR', tag: 'megumin' },
+  { character_name: 'Hitori Gotoh', anime_name: 'Bocchi the Rock!', rarity: 'SSR', tag: 'gotou_hitori' },
+  { character_name: 'Saber', anime_name: 'Fate/stay night', rarity: 'SSR', tag: 'saber_(fate)' },
+  { character_name: 'Makima', anime_name: 'Chainsaw Man', rarity: 'SSR', tag: 'makima_(chainsaw_man)' },
+  { character_name: 'Ai Hoshino', anime_name: 'Oshi no Ko', rarity: 'SSR', tag: 'hoshino_ai_(oshi_no_ko)' },
+  { character_name: 'Gojo Satoru', anime_name: 'Jujutsu Kaisen', rarity: 'SSR', tag: 'gojou_satoru' },
+  { character_name: 'Levi Ackerman', anime_name: 'Attack on Titan', rarity: 'SSR', tag: 'levi_(shingeki_no_kyojin)' },
 
-window.handleImageError = async function(imgElement, charName, cardIdx) {
-  imgElement.onerror = null;
-  const realUrl = await fetchRealImageByName(charName);
-  if (realUrl) {
-    imgElement.src = realUrl;
-    if (currentUser?.koleksi?.[cardIdx]) {
-      currentUser.koleksi[cardIdx].url = realUrl;
-      localStorage.setItem('gacha_user', JSON.stringify(currentUser));
-    }
-  }
-};
+  // --- SR (25%) ---
+  { character_name: 'Marin Kitagawa', anime_name: 'My Dress-Up Darling', rarity: 'SR', tag: 'kitagawa_marin' },
+  { character_name: 'Emilia', anime_name: 'Re:Zero', rarity: 'SR', tag: 'emilia_(re:zero)' },
+  { character_name: 'Aqua', anime_name: 'KonoSuba', rarity: 'SR', tag: 'aqua_(konosuba)' },
+  { character_name: 'Fern', anime_name: 'Sousou no Frieren', rarity: 'SR', tag: 'fern_(sousou_no_frieren)' },
+  { character_name: 'Chisato Nishikigi', anime_name: 'Lycoris Recoil', rarity: 'SR', tag: 'nishikigi_chisato' },
+  { character_name: 'Takina Inoue', anime_name: 'Lycoris Recoil', rarity: 'SR', tag: 'inoue_takina' },
+  { character_name: 'Kita Ikuyo', anime_name: 'Bocchi the Rock!', rarity: 'SR', tag: 'kita_ikuyo' },
+  { character_name: 'Yor Forger', anime_name: 'Spy × Family', rarity: 'SR', tag: 'yor_forger' },
+  { character_name: 'Power', anime_name: 'Chainsaw Man', rarity: 'SR', tag: 'power_(chainsaw_man)' },
+  { character_name: 'Kurumi Tokisaki', anime_name: 'Date A Live', rarity: 'SR', tag: 'tokisaki_kurumi' },
+  { character_name: 'Kaguya Shinomiya', anime_name: 'Kaguya-sama: Love is War', rarity: 'SR', tag: 'shinomiya_kaguya' },
+  { character_name: 'Zero Two', anime_name: 'Darling in the FranXX', rarity: 'SR', tag: 'zero_two_(darling_in_the_franxx)' },
+  { character_name: 'Kurisu Makise', anime_name: 'Steins;Gate', rarity: 'SR', tag: 'makise_kurisu' },
+  { character_name: 'Killua Zoldyck', anime_name: 'Hunter × Hunter', rarity: 'SR', tag: 'killua_zoldyck' },
 
-// 4. Engine Dynamic AniList Live (Kolam ~1.000 Karakter)
-async function fetchAniListPage(pageNumber) {
-  const cacheKey = `anilist_page_v2_${pageNumber}`;
+  // --- R (70%) ---
+  { character_name: 'Anya Forger', anime_name: 'Spy × Family', rarity: 'R', tag: 'anya_forger' },
+  { character_name: 'Chika Fujiwara', anime_name: 'Kaguya-sama: Love is War', rarity: 'R', tag: 'fujiwara_chika' },
+  { character_name: 'Darkness', anime_name: 'KonoSuba', rarity: 'R', tag: 'darkness_(konosuba)' },
+  { character_name: 'Ram', anime_name: 'Re:Zero', rarity: 'R', tag: 'ram_(re:zero)' },
+  { character_name: 'Nezuko Kamado', anime_name: 'Demon Slayer', rarity: 'R', tag: 'kamado_nezuko' },
+  { character_name: 'Shinobu Kocho', anime_name: 'Demon Slayer', rarity: 'R', tag: 'kochou_shinobu' },
+  { character_name: 'Mitsuri Kanroji', anime_name: 'Demon Slayer', rarity: 'R', tag: 'kanroji_mitsuri' },
+  { character_name: 'Asuna Yuuki', anime_name: 'Sword Art Online', rarity: 'R', tag: 'yuuki_asuna' },
+  { character_name: 'Nijika Ijichi', anime_name: 'Bocchi the Rock!', rarity: 'R', tag: 'ijichi_nijika' },
+  { character_name: 'Ryo Yamada', anime_name: 'Bocchi the Rock!', rarity: 'R', tag: 'yamada_ryou_(bocchi_the_rock!)' },
+  { character_name: 'Ruby Hoshino', anime_name: 'Oshi no Ko', rarity: 'R', tag: 'hoshino_ruby' },
+  { character_name: 'Kana Arima', anime_name: 'Oshi no Ko', rarity: 'R', tag: 'arima_kana' },
+  { character_name: 'Mai Sakurajima', anime_name: 'Bunny Girl Senpai', rarity: 'R', tag: 'sakurajima_mai' },
+  { character_name: 'Miku Nakano', anime_name: 'The Quintessential Quintuplets', rarity: 'R', tag: 'nakano_miku' },
+  { character_name: 'Nino Nakano', anime_name: 'The Quintessential Quintuplets', rarity: 'R', tag: 'nakano_nino' },
+  { character_name: 'Violet Evergarden', anime_name: 'Violet Evergarden', rarity: 'R', tag: 'violet_evergarden' },
+  { character_name: 'Rebecca', anime_name: 'Cyberpunk: Edgerunners', rarity: 'R', tag: 'rebecca_(cyberpunk)' },
+  { character_name: 'Lucy', anime_name: 'Cyberpunk: Edgerunners', rarity: 'R', tag: 'lucy_(cyberpunk)' },
+  { character_name: 'Stark', anime_name: 'Sousou no Frieren', rarity: 'R', tag: 'stark_(sousou_no_frieren)' },
+  { character_name: 'Himmel', anime_name: 'Sousou no Frieren', rarity: 'R', tag: 'himmel_(sousou_no_frieren)' },
+  { character_name: 'Loid Forger', anime_name: 'Spy × Family', rarity: 'R', tag: 'loid_forger' },
+  { character_name: 'Tanjiro Kamado', anime_name: 'Demon Slayer', rarity: 'R', tag: 'kamado_tanjirou' },
+  { character_name: 'Megumi Fushiguro', anime_name: 'Jujutsu Kaisen', rarity: 'R', tag: 'fushiguro_megumi' },
+  { character_name: 'Edward Elric', anime_name: 'Fullmetal Alchemist', rarity: 'R', tag: 'edward_elric' },
+  { character_name: 'Katsuki Bakugou', anime_name: 'My Hero Academia', rarity: 'R', tag: 'bakugou_katsuki' },
+  { character_name: 'Shouto Todoroki', anime_name: 'My Hero Academia', rarity: 'R', tag: 'todoroki_shouto' },
+  { character_name: 'Naruto Uzumaki', anime_name: 'Naruto', rarity: 'R', tag: 'uzumaki_naruto' },
+  { character_name: 'Subaru Natsuki', anime_name: 'Re:Zero', rarity: 'R', tag: 'natsuki_subaru' }
+];
+
+// 4. Engine Fetch Gambar Safebooru HD
+async function fetchSafebooruIllustration(tag) {
+  const cacheKey = `sb_img_v1_${tag}`;
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) {}
+    try {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[Math.floor(Math.random() * parsed.length)];
+      }
+    } catch (e) {}
   }
 
-  const query = `query ($page: Int) {
-    Page(page: $page, perPage: 25) {
-      characters(sort: FAVOURITES_DESC) {
-        name { full }
-        image { large }
-        media(sort: FAVOURITES_DESC, perPage: 1) {
-          nodes { title { userPreferred } }
-        }
-      }
-    }
-  }`;
-
   try {
-    const res = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ query, variables: { page: pageNumber } })
-    });
-    const json = await res.json();
-    const list = (json?.data?.Page?.characters || []).map(c => ({
-      character_name: c.name.full,
-      anime_name: c.media?.nodes?.[0]?.title?.userPreferred || 'Anime Series',
-      url: c.image.large
-    }));
-    if (list.length > 0) {
-      localStorage.setItem(cacheKey, JSON.stringify(list));
-      return list;
+    const url = `https://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&limit=25&tags=${encodeURIComponent(tag + ' solo rating:safe')}`;
+    const res = await fetch(url);
+    const posts = await res.json();
+    const valid = (posts || []).filter(p => p.image && !p.image.endsWith('.mp4') && !p.image.endsWith('.webm'));
+
+    if (valid.length > 0) {
+      const urls = valid.map(p => `https://safebooru.org/images/${p.directory}/${p.image}`);
+      localStorage.setItem(cacheKey, JSON.stringify(urls));
+      return urls[Math.floor(Math.random() * urls.length)];
     }
   } catch (err) {}
-  return [];
+
+  return 'https://s4.anilist.co/file/anilistcdn/character/large/b88572-10kF6A00F70p.png';
 }
 
 async function rollCard(targetRarity) {
-  let targetPage = 1;
-  if (targetRarity === 'SSR') {
-    targetPage = 1;
-  } else if (targetRarity === 'SR') {
-    targetPage = Math.floor(Math.random() * 5) + 2;
-  } else {
-    targetPage = Math.floor(Math.random() * 34) + 7;
-  }
+  const candidates = GACHA_ROSTER.filter(c => c.rarity === targetRarity);
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)] || GACHA_ROSTER[0];
+  const imageUrl = await fetchSafebooruIllustration(chosen.tag);
 
-  let pool = await fetchAniListPage(targetPage);
-  if (!pool || pool.length === 0) {
-    pool = await fetchAniListPage(1);
-  }
-
-  const chosen = pool[Math.floor(Math.random() * pool.length)] || {
-    character_name: 'Subaru Natsuki',
-    anime_name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
-    url: 'https://s4.anilist.co/file/anilistcdn/character/large/b88573-mQ847hO5n9hA.png'
+  return {
+    character_name: chosen.character_name,
+    anime_name: chosen.anime_name,
+    rarity: chosen.rarity,
+    artist_name: 'Safebooru Fanart HD',
+    url: imageUrl
   };
-
-  return { ...chosen, rarity: targetRarity, artist_name: chosen.anime_name };
 }
 
 // 5. Inisialisasi
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   const modalAuth = document.getElementById('modalAuth');
   if (!currentUser) {
     if (modalAuth) modalAuth.style.display = 'flex';
@@ -189,8 +195,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderUI();
     syncUserData();
   }
-
-  fetchAniListPage(1);
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   initTabs();
@@ -313,6 +317,8 @@ document.getElementById('btnTarikGacha')?.addEventListener('click', async () => 
   cardWrapper.classList.remove('flipped');
   await new Promise(r => setTimeout(r, 350));
 
+  showToast('Memanggil ilustrasi Safebooru...');
+
   let targetRarity = 'R';
   if ((currentUser.pity || 0) >= 29) {
     targetRarity = 'SSR';
@@ -365,7 +371,7 @@ document.getElementById('btnTarikGacha')?.addEventListener('click', async () => 
 
   cardImg.onload = finish;
   cardImg.onerror = finish;
-  setTimeout(() => { if (isFlipping) finish(); }, 2000);
+  setTimeout(() => { if (isFlipping) finish(); }, 2500);
   cardImg.src = newCard.url;
 
   fetch(APPS_SCRIPT_URL, {
@@ -420,13 +426,12 @@ function renderGallery() {
   filtered.forEach(c => {
     const key = `${c.url}_${c._origIdx}`;
     const isNew = !seenCards.has(key);
-    const safeName = (c.character_name || '').replace(/'/g, "\\'");
     const el = document.createElement('div');
     el.className = `mini-card rarity-${c.rarity}`;
     el.innerHTML = `
       ${isNew ? '<span class="badge-new">NEW</span>' : ''}
       ${c.count > 1 ? `<span style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.75); color:#fbbf24; font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px; border:1px solid rgba(251,191,36,0.4); z-index:5;">x${c.count}</span>` : ''}
-      <img src="${c.url}" loading="lazy" referrerpolicy="no-referrer" alt="${c.character_name}" onerror="window.handleImageError(this, '${safeName}', ${c._origIdx})">
+      <img src="${c.url}" loading="lazy" referrerpolicy="no-referrer" alt="${c.character_name}">
       <div class="mini-card-info">
         <span class="m-rarity" style="color: var(--rarity-${c.rarity.toLowerCase()})">${c.rarity}</span>
         <h4>${c.character_name}</h4>
@@ -466,7 +471,7 @@ function initGalleryControls() {
   });
 }
 
-// 10. Detail Modal & Shards
+// 10. Detail Modal & Download Langsung ke Disk (Anti-Tab Baru)
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   document.getElementById('btnCloseDetail')?.addEventListener('click', () => {
@@ -475,12 +480,41 @@ function initCardDetailModal() {
   document.getElementById('btnDownloadCard')?.addEventListener('click', () => {
     if (!activeModalCard) return;
     playSFX('click');
-    const a = document.createElement('a');
-    a.href = activeModalCard.url;
-    a.download = `${activeModalCard.character_name}.png`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    showToast('Download dimulai! 💾');
+    downloadDirectToDisk(activeModalCard.url, activeModalCard.character_name);
   });
+}
+
+async function downloadDirectToDisk(url, name) {
+  showToast('Mengunduh gambar ke penyimpanan... 💾');
+  const filename = `${name.replace(/\s+/g, '_')}_safebooru.jpg`;
+
+  try {
+    let res;
+    try {
+      res = await fetch(url);
+      if (!res.ok) throw new Error();
+    } catch (e) {
+      const cleanUrl = url.replace(/^https?:\/\//i, '');
+      res = await fetch(`https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}`);
+    }
+
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    }, 2000);
+    showToast('Gambar berhasil disimpan ke disk! 💾');
+  } catch (err) {
+    showToast('Gagal mengunduh gambar.');
+  }
 }
 
 function openCardDetail(card) {
@@ -495,7 +529,7 @@ function openCardDetail(card) {
   document.getElementById('detailImg').src = card.url;
   document.getElementById('detailCharacter').innerText = `${card.character_name} ${card.count > 1 ? `(x${card.count})` : ''}`;
   document.getElementById('detailAnime').innerText = card.anime_name;
-  document.getElementById('detailArtist').innerText = card.artist_name || 'Official Art';
+  document.getElementById('detailArtist').innerText = card.artist_name || 'Safebooru Fanart HD';
   document.getElementById('detailDate').innerText = card.date;
   modal.style.display = 'flex';
 }
