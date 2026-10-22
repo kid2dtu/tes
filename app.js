@@ -11,7 +11,6 @@ let currentSearch = '';
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
-// Pastikan variabel akun aman
 if (currentUser) {
   if (currentUser.pity === undefined) currentUser.pity = 0;
   if (currentUser.shards === undefined) currentUser.shards = 0;
@@ -134,7 +133,7 @@ function triggerSSRConfetti() {
   render();
 }
 
-// 3. Database Karakter Pool (Dengan ID AniList Resmi - Bebas Blokir & 100% Akurat)
+// 3. Database Karakter Pool (ID AniList Resmi)
 const GACHA_CARD_POOL = [
   // --- SSR (5%) ---
   { id: 134440, character_name: 'Hu Tao', anime_name: 'Genshin Impact', rarity: 'SSR', artist_name: 'HoYoverse' },
@@ -181,7 +180,6 @@ const GACHA_CARD_POOL = [
   { id: 5193, character_name: 'Hatsune Miku', anime_name: 'Vocaloid', rarity: 'R', artist_name: 'KEI' }
 ];
 
-// Helper Mengambil Gambar Resmi dari AniList API (Disimpan di Cache Lokal)
 async function getAniListImage(card) {
   const cacheKey = `anilist_img_${card.id}`;
   const cached = localStorage.getItem(cacheKey);
@@ -205,15 +203,11 @@ async function getAniListImage(card) {
   } catch (e) {
     console.warn('Gagal fetch gambar AniList:', e);
   }
-
-  // Cadangan darurat jika koneksi lambat
-  return `https://nekos.best/api/v2/neko`;
+  return 'https://nekos.best/api/v2/neko';
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   const modalAuth = document.getElementById('modalAuth');
-  
-  // Pastikan tombol gacha tidak terkunci saat halaman baru dimuat
   const btnGacha = document.getElementById('btnTarikGacha');
   if (btnGacha) btnGacha.disabled = false;
   isFlipping = false;
@@ -237,7 +231,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initGachaInfoModal();
 });
 
-// Otomatis Memperbaiki Kartu Rusak di Akun Pengguna
+// Perbaiki otomatis kartu lama yang link gambarnya rusak
 async function repairUserCollection() {
   if (!currentUser || !Array.isArray(currentUser.koleksi)) return;
   let hasRepair = false;
@@ -494,7 +488,7 @@ function renderStatsAndShards() {
   if (elShard) elShard.innerText = currentUser.shards || 0;
 }
 
-// 9. Tarik Gacha (Dengan Pengaman Anti-Macet & AniList Image)
+// 9. Tarik Gacha Anti-Macet
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -514,7 +508,6 @@ if (btnGacha) {
     await new Promise(r => setTimeout(r, 350));
     showToast('Memanggil kartu anime...');
 
-    // Hitung Rarity & Pity 30
     const pityNow = currentUser.pity || 0;
     let targetRarity = 'R';
 
@@ -557,7 +550,6 @@ if (btnGacha) {
     document.getElementById('kartuAnime').innerText = newCard.character_name;
     document.getElementById('kartuArtist').innerText = `Artis: ${newCard.artist_name}`;
 
-    // Deteksi Kartu Duplikat (Star Shard)
     const isDuplicate = currentUser.koleksi.some(
       c => c.character_name === newCard.character_name && c.rarity === newCard.rarity
     );
@@ -571,7 +563,6 @@ if (btnGacha) {
     currentUser.tickets = Math.max(0, currentUser.tickets - 1);
     lastKnownTickets = currentUser.tickets;
 
-    // Reset Pity jika SSR
     if (newCard.rarity === 'SSR') currentUser.pity = 0;
     else currentUser.pity = (currentUser.pity || 0) + 1;
 
@@ -586,7 +577,6 @@ if (btnGacha) {
 
     renderStatsAndShards();
 
-    // Fungsi Pembuka Kartu & Pelepas Kunci Tombol
     let cardUnlocked = false;
     const unlockGachaAction = () => {
       if (cardUnlocked) return;
@@ -609,15 +599,12 @@ if (btnGacha) {
     };
 
     cardImg.onload = unlockGachaAction;
-    cardImg.onerror = () => {
-      console.warn('Gambar lambat/gagal, tetap membuka kartu');
-      unlockGachaAction();
-    };
+    cardImg.onerror = unlockGachaAction;
 
-    // Watchdog Timer Pengaman: Tombol DIJAMIN terbuka maksimal 3.5 detik
+    // Pengaman maksimal 2.5 detik
     setTimeout(() => {
       if (isFlipping) unlockGachaAction();
-    }, 3500);
+    }, 2500);
 
     cardImg.src = newCard.url;
 
@@ -813,7 +800,6 @@ async function downloadCardImage(url, name) {
     }, 2000);
     showToast('Gambar berhasil disimpan ke disk! 💾');
   } catch (err) {
-    // Fallback jika unduhan langsung terhambat
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
