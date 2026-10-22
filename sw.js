@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animegacha-v1';
+const CACHE_NAME = 'animegacha-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -27,15 +27,15 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.url.includes('script.google.com')) {
-    return; // Request API Google Sheets tidak di-cache statis
+  // Jangan cache request ke Google Apps Script dan gambar luar (AniList)
+  if (e.request.url.includes('script.google.com') || e.request.url.includes('anilist.co')) {
+    return;
   }
   e.respondWith(
     caches.match(e.request).then((res) => res || fetch(e.request))
   );
 });
 
-// Menampilkan notifikasi tiket
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   e.waitUntil(
