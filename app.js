@@ -7,37 +7,52 @@ let currentFilter = 'ALL';
 let currentSort = 'recent';
 let activeSelectedCard = null;
 
-// Registrasi Service Worker
+// ==========================================
+// 1. SERVICE WORKER & SISTEM NOTIFIKASI
+// ==========================================
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(console.error);
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
+    reg.update();
+  }).catch(console.error);
 }
 
-// 1. AUTO TRIGGER NOTIFIKASI SAAT LOGIN
-async function setupNotificationAuto(username) {
-  if (!('Notification' in window)) return;
+// Kirim Perintah Tampilkan Notifikasi ke Service Worker
+function sendSWNotification(title, bodyText) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-  if (Notification.permission === 'default') {
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      sendWelcomeNotification(username);
-    }
-  } else if (Notification.permission === 'granted') {
-    updateNotifStatusUI(true);
-  } else {
-    updateNotifStatusUI(false);
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'TRIGGER_NOTIFICATION',
+      title: title,
+      options: {
+        body: bodyText,
+        vibrate: [200, 100, 200]
+      }
+    });
+  } else if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then((reg) => {
+      reg.showNotification(title, {
+        body: bodyText,
+        icon: '/icon.png',
+        badge: '/icon.png',
+        vibrate: [200, 100, 200]
+      });
+    });
   }
 }
 
-function sendWelcomeNotification(username) {
-  if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.showNotification('AnimeGacha Aktif!', {
-        body: `Halo ${username}! 10 Tiket harianmu otomatis reset setiap jam 00:00 WIB.`,
-        icon: '/icon.png',
-        badge: '/icon.png'
-      });
-    });
-    updateNotifStatusUI(true);
+// Pemicu Izin Notifikasi Langsung (User Gesture)
+async function triggerDirectNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        updateNotifStatusUI(true);
+        sendSWNotification('AnimeGacha Aktif! ✨', 'Izin notifikasi berhasil diaktifkan di perangkatmu.');
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 
@@ -47,7 +62,10 @@ function updateNotifStatusUI(isEnabled) {
   if (!container || !text) return;
 
   if (isEnabled) {
-    container.innerHTML = '<span class="badge-notif-active">✅ Notifikasi Aktif</span>';
+    container.innerHTML = `
+      <span class="badge-notif-active">✅ Notifikasi Aktif</span>
+      <button id="btnTestNotif" class="btn-secondary" style="font-size:0.75rem; padding:4px 8px; margin-top:4px;">🔔 Tes Notif HP</button>
+    `;
     text.textContent = 'Pengingat tiket otomatis setiap pukul 00:00 WIB.';
   } else {
     container.innerHTML = '<button id="btnManualNotif" class="btn-secondary">Aktifkan</button>';
@@ -56,13 +74,32 @@ function updateNotifStatusUI(isEnabled) {
     if (btn) {
       btn.addEventListener('click', async () => {
         const p = await Notification.requestPermission();
-        if (p === 'granted') updateNotifStatusUI(true);
+        if (p === 'granted') {
+          updateNotifStatusUI(true);
+          sendSWNotification('AnimeGacha Aktif! ✨', 'Notifikasi berhasil diaktifkan!');
+        }
       });
     }
   }
 }
 
-// 2. PENGECEK NOTIFIKASI PERSONAL & BROADCAST DARI ADMIN
+// Timer Pengingat Reset Tiket Jam 00:00 WIB
+function scheduleMidnightResetNotification() {
+  const now = new Date();
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+  const msUntilMidnight = tomorrow.getTime() - now.getTime();
+
+  setTimeout(() => {
+    sendSWNotification(
+      'AnimeGacha - Tiket Direset! 🎟️',
+      '10 Tiket harian gratis kamu sudah diisi ulang. Ayo tarik kartu baru hari ini!'
+    );
+    refreshCurrentUserData();
+    scheduleMidnightResetNotification();
+  }, msUntilMidnight);
+}
+
+// Pengecek Notifikasi Personal & Broadcast Admin
 async function checkPendingNotifications() {
   if (!currentUser || !('Notification' in window) || Notification.permission !== 'granted') return;
 
@@ -71,28 +108,17 @@ async function checkPendingNotifications() {
     const data = await res.json();
 
     if (data.status === 'success') {
-      const reg = await navigator.serviceWorker.ready;
-
-      // A. Notifikasi Personal (Misal Tiket Diubah Admin)
+      // 1. Notifikasi Tiket Diubah Admin
       if (data.user_notif) {
-        reg.showNotification('AnimeGacha - Tiket Diperbarui!', {
-          body: data.user_notif,
-          icon: '/icon.png',
-          badge: '/icon.png'
-        });
-        // Segarkan data user di layar
+        sendSWNotification('AnimeGacha - Tiket Diperbarui! 🎟️', data.user_notif);
         refreshCurrentUserData();
       }
 
-      // B. Notifikasi Broadcast ke Semua User
+      // 2. Notifikasi Broadcast Pengumuman
       if (data.announcement) {
         const lastSeen = localStorage.getItem('last_seen_announcement');
         if (lastSeen !== data.announcement.id) {
-          reg.showNotification(data.announcement.title, {
-            body: data.announcement.message,
-            icon: '/icon.png',
-            badge: '/icon.png'
-          });
+          sendSWNotification(data.announcement.title, data.announcement.message);
           localStorage.setItem('last_seen_announcement', data.announcement.id);
         }
       }
@@ -112,7 +138,14 @@ async function refreshCurrentUserData() {
   }
 }
 
-// Helper API Google Apps Script
+// Event Delegation Tombol Tes Notifikasi
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'btnTestNotif') {
+    sendSWNotification('AnimeGacha Berhasil! 🎟️', 'Sistem notifikasi di HP Android kamu sudah aktif sempurna!');
+  }
+});
+
+// Helper Request POST Google Apps Script
 async function callAPI(payload) {
   try {
     const res = await fetch(API_URL, {
@@ -125,13 +158,20 @@ async function callAPI(payload) {
   }
 }
 
-// 3. INITIAL LOAD
+// ==========================================
+// 2. INISIALISASI APLIKASI
+// ==========================================
 window.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupFilters();
   setupSort();
   setupRulesModal();
 
+  if ('Notification' in window) {
+    updateNotifStatusUI(Notification.permission === 'granted');
+  }
+
+  // Ambil Card Pool dari Sheets
   try {
     const poolRes = await fetch(`${API_URL}?action=get_pool`);
     const poolJson = await poolRes.json();
@@ -143,6 +183,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.error("Gagal load kartu:", e);
   }
 
+  // Cek Status Sesi Login
   const savedUser = localStorage.getItem('gacha_user');
   const savedPin = localStorage.getItem('gacha_pin');
 
@@ -152,12 +193,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('authModal').classList.remove('hidden');
   }
 
-  // Cek notifikasi berkala tiap 45 detik
+  // Polling Pengecekan Notifikasi Setiap 45 Detik
   setInterval(checkPendingNotifications, 45000);
 });
 
-// 4. LOGIN & REGISTER
+// ==========================================
+// 3. LOGIN & MANAJEMEN USER
+// ==========================================
 document.getElementById('btnLogin').addEventListener('click', async () => {
+  triggerDirectNotificationPermission();
+
   const username = document.getElementById('authUsername').value.trim();
   const pin = document.getElementById('authPin').value.trim();
   const errBox = document.getElementById('authError');
@@ -176,8 +221,9 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     errBox.textContent = '';
-    setupNotificationAuto(username);
-    setTimeout(checkPendingNotifications, 2000);
+    
+    scheduleMidnightResetNotification();
+    setTimeout(checkPendingNotifications, 1500);
   } else {
     errBox.textContent = res.message;
   }
@@ -188,8 +234,8 @@ async function loginUser(username, pin) {
   if (res.status === 'success') {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
-    setupNotificationAuto(username);
-    setTimeout(checkPendingNotifications, 2000);
+    scheduleMidnightResetNotification();
+    setTimeout(checkPendingNotifications, 1500);
   } else {
     localStorage.clear();
     document.getElementById('authModal').classList.remove('hidden');
@@ -212,7 +258,9 @@ function applyUserData(user, inventory) {
   renderAlbum();
 }
 
-// 5. TARIK GACHA
+// ==========================================
+// 4. SISTEM TARIK GACHA & ANIMASI 3D
+// ==========================================
 const btnPull = document.getElementById('btnPull');
 const gachaCard = document.getElementById('gachaCard');
 
@@ -250,13 +298,13 @@ btnPull.addEventListener('click', async () => {
 
     setTimeout(() => {
       gachaCard.classList.add('flipped');
-    }, 250);
+    }, 200);
 
     userInventory.push({ card_id: res.card.id, obtained_at: new Date().toISOString() });
     applyUserData(currentUser, userInventory);
 
     if (res.is_duplicate) {
-      setTimeout(() => alert('Kartu kembar! Kamu dapat +1 Star Shard ⭐'), 900);
+      setTimeout(() => alert('Kartu kembar! Kamu dapat +1 Star Shard ⭐'), 850);
     }
   } else {
     alert(res.message);
@@ -267,7 +315,9 @@ gachaCard.addEventListener('click', () => {
   gachaCard.classList.toggle('flipped');
 });
 
-// 6. ALBUM KOLEKSI
+// ==========================================
+// 5. ALBUM KOLEKSI (FILTER & SORTING)
+// ==========================================
 function updateAlbumCounts() {
   const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
   const ownedCards = cardPool.filter(c => ownedCardIds.includes(c.id));
@@ -344,7 +394,9 @@ function setupFilters() {
   });
 }
 
-// 7. DETAIL MODAL & UNDUH
+// ==========================================
+// 6. DETAIL MODAL & UNDUH MULTI-LAPIS
+// ==========================================
 function openCardDetail(card) {
   activeSelectedCard = card;
   document.getElementById('modalRarityBadge').textContent = card.rarity;
@@ -386,15 +438,17 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
     }, 1500);
   }
 
+  // Lapisan 1: Fresh Direct Fetch
   async function tryDirectFetch() {
     const fetchUrl = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'download=1';
     const res = await fetch(fetchUrl, { mode: 'cors' });
-    if (!res.ok) throw new Error('Fetch error');
+    if (!res.ok) throw new Error('Direct fetch failed');
     const blob = await res.blob();
     triggerBlobDownload(blob);
     return true;
   }
 
+  // Lapisan 2: HTML5 Canvas Export
   function tryCanvasDownload() {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -418,11 +472,12 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
           reject(e);
         }
       };
-      img.onerror = () => reject(new Error('Img load failed'));
+      img.onerror = () => reject(new Error('Image failed to load on canvas'));
       img.src = rawUrl + (rawUrl.includes('?') ? '&' : '?') + 'cv=1';
     });
   }
 
+  // Lapisan 3: Multi CORS Proxies
   async function tryProxyFetch() {
     const proxies = [
       `https://corsproxy.io/?url=${encodeURIComponent(rawUrl)}`,
@@ -475,7 +530,9 @@ document.getElementById('btnDownloadCard').addEventListener('click', async () =>
   }
 });
 
-// 8. MODAL INFO ATURAN & PREVIEW SSR
+// ==========================================
+// 7. MODAL ATURAN & PREVIEW SSR
+// ==========================================
 function setupRulesModal() {
   document.getElementById('btnOpenRules').addEventListener('click', () => {
     document.getElementById('rulesModal').classList.remove('hidden');
@@ -501,7 +558,9 @@ function renderSSRPoolPreview() {
   });
 }
 
-// 9. TUKAR STAR SHARD & STATISTIK
+// ==========================================
+// 8. TUKAR STAR SHARD & PROFIL
+// ==========================================
 document.getElementById('btnTradeShard').addEventListener('click', async () => {
   if (currentUser.shards < 5) {
     alert('Star Shard tidak cukup (minimal 5).');
