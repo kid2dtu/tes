@@ -3,31 +3,64 @@ const API_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5Kc
 let currentUser = null;
 let cardPool = [];
 let userInventory = [];
+let currentFilter = 'ALL';
+let currentSort = 'recent';
+let activeSelectedCard = null;
 
-// Registrasi Service Worker & Notifikasi
+// Registrasi Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(console.error);
 }
 
-document.getElementById('btnEnableNotif').addEventListener('click', async () => {
-  if (!('Notification' in window)) {
-    alert('Browser tidak mendukung web push notification.');
-    return;
+// 1. AUTO TRIGGER NOTIFIKASI SAAT LOGIN (Fitur 5)
+async function setupNotificationAuto(username) {
+  if (!('Notification' in window)) return;
+
+  if (Notification.permission === 'default') {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      sendWelcomeNotification(username);
+    }
+  } else if (Notification.permission === 'granted') {
+    updateNotifStatusUI(true);
+  } else {
+    updateNotifStatusUI(false);
   }
-  const permission = await Notification.requestPermission();
-  if (permission === 'granted') {
+}
+
+function sendWelcomeNotification(username) {
+  if ('serviceWorker' in navigator && Notification.permission === 'granted') {
     navigator.serviceWorker.ready.then((reg) => {
       reg.showNotification('AnimeGacha Aktif!', {
-        body: 'Notifikasi reset tiket jam 00:00 WIB berhasil dinyalakan.',
+        body: `Halo ${username}! 10 Tiket harianmu otomatis reset setiap jam 00:00 WIB.`,
         icon: '/icon.png',
         badge: '/icon.png'
       });
     });
-    alert('Notifikasi berhasil diaktifkan!');
+    updateNotifStatusUI(true);
   }
-});
+}
 
-// Helper Fetch GAS
+function updateNotifStatusUI(isEnabled) {
+  const container = document.getElementById('notifBadgeContainer');
+  const text = document.getElementById('notifStatusText');
+  if (isEnabled) {
+    container.innerHTML = '<span class="badge-notif-active">✅ Notifikasi Aktif</span>';
+    text.textContent = 'Pengingat tiket otomatis setiap pukul 00:00 WIB.';
+  } else {
+    container.innerHTML = '<button id="btnManualNotif" class="btn-secondary">Aktifkan</button>';
+    text.textContent = 'Izin notifikasi belum diaktifkan di peramban.';
+    const btn = document.getElementById('btnManualNotif');
+    if (btn) {
+      btn.addEventListener('click', async () => {
+        const p = await Notification.requestPermission();
+        if (p === 'granted') updateNotifStatusUI(true);
+      });
+    }
+  }
+}
+
+// Helper API Google Apps Script
 async function callAPI(payload) {
   try {
     const res = await fetch(API_URL, {
@@ -40,15 +73,20 @@ async function callAPI(payload) {
   }
 }
 
+// 2. INITIAL LOAD
 window.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupFilters();
+  setupSort();
+  setupRulesModal();
 
+  // Load pool kartu dari GAS
   try {
     const poolRes = await fetch(`${API_URL}?action=get_pool`);
     const poolJson = await poolRes.json();
     if (poolJson.status === 'success') {
       cardPool = poolJson.cards;
+      renderSSRPoolPreview();
     }
   } catch (e) {
     console.error("Gagal load kartu:", e);
@@ -64,7 +102,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Autentikasi Pemain
+// 3. LOGIN & REGISTER
 document.getElementById('btnLogin').addEventListener('click', async () => {
   const username = document.getElementById('authUsername').value.trim();
   const pin = document.getElementById('authPin').value.trim();
@@ -84,6 +122,9 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     errBox.textContent = '';
+    
+    // Auto-trigger notifikasi harian
+    setupNotificationAuto(username);
   } else {
     errBox.textContent = res.message;
   }
@@ -94,6 +135,7 @@ async function loginUser(username, pin) {
   if (res.status === 'success') {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
+    setupNotificationAuto(username);
   } else {
     localStorage.clear();
     document.getElementById('authModal').classList.remove('hidden');
@@ -112,10 +154,11 @@ function applyUserData(user, inventory) {
   document.getElementById('pityFill').style.width = `${(user.pity_count / 30) * 100}%`;
 
   updateStats();
-  renderAlbum('ALL');
+  updateAlbumCounts();
+  renderAlbum();
 }
 
-// Tarik Gacha
+// 4. TARIK GACHA
 const btnPull = document.getElementById('btnPull');
 const gachaCard = document.getElementById('gachaCard');
 
@@ -153,7 +196,7 @@ btnPull.addEventListener('click', async () => {
 
     setTimeout(() => {
       gachaCard.classList.add('flipped');
-    }, 200);
+    }, 250);
 
     userInventory.push({ card_id: res.card.id, obtained_at: new Date().toISOString() });
     applyUserData(currentUser, userInventory);
@@ -170,7 +213,157 @@ gachaCard.addEventListener('click', () => {
   gachaCard.classList.toggle('flipped');
 });
 
-// Tukar Star Shards
+// 5. ALBUM KOLEKSI: FILTER, URUTAN, & ANGKA REALTIME (Fitur 3)
+function updateAlbumCounts() {
+  const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
+  const ownedCards = cardPool.filter(c => ownedCardIds.includes(c.id));
+
+  const totalAll = ownedCards.length;
+  const countSSR = ownedCards.filter(c => c.rarity === 'SSR').length;
+  const countSR = ownedCards.filter(c => c.rarity === 'SR').length;
+  const countR = ownedCards.filter(c => c.rarity === 'R').length;
+
+  document.getElementById('albumTotalCountBadge').textContent = `${totalAll} Kartu`;
+  document.getElementById('countFilterALL').textContent = `(${totalAll})`;
+  document.getElementById('countFilterSSR').textContent = `(${countSSR})`;
+  document.getElementById('countFilterSR').textContent = `(${countSR})`;
+  document.getElementById('countFilterR').textContent = `(${countR})`;
+}
+
+function renderAlbum() {
+  const grid = document.getElementById('albumGrid');
+  grid.innerHTML = '';
+
+  const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
+  let cardsToDisplay = cardPool.filter(c => ownedCardIds.includes(c.id));
+
+  // Terapkan Filter
+  if (currentFilter !== 'ALL') {
+    cardsToDisplay = cardsToDisplay.filter(c => c.rarity === currentFilter);
+  }
+
+  // Terapkan Urutan
+  if (currentSort === 'recent') {
+    // Berdasarkan index inventory terakhir
+    cardsToDisplay.sort((a, b) => {
+      const idxA = userInventory.map(x => x.card_id).lastIndexOf(a.id);
+      const idxB = userInventory.map(x => x.card_id).lastIndexOf(b.id);
+      return idxB - idxA;
+    });
+  } else if (currentSort === 'name') {
+    cardsToDisplay.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (currentSort === 'rarity') {
+    const weight = { 'SSR': 3, 'SR': 2, 'R': 1 };
+    cardsToDisplay.sort((a, b) => (weight[b.rarity] || 0) - (weight[a.rarity] || 0));
+  }
+
+  document.getElementById('albumStatusText').textContent = 
+    `Menampilkan ${cardsToDisplay.length} dari ${ownedCardIds.length} koleksi`;
+  document.getElementById('emptyAlbumMsg').classList.toggle('hidden', cardsToDisplay.length > 0);
+
+  cardsToDisplay.forEach(card => {
+    const item = document.createElement('div');
+    item.className = 'album-card-item';
+    item.innerHTML = `
+      <div class="rarity-badge ${card.rarity}">${card.rarity}</div>
+      <img src="${card.image_url}" loading="lazy" alt="${card.name}">
+    `;
+    item.addEventListener('click', () => openCardDetail(card));
+    grid.appendChild(item);
+  });
+}
+
+function setupSort() {
+  const sortSelect = document.getElementById('albumSort');
+  sortSelect.addEventListener('change', (e) => {
+    currentSort = e.target.value;
+    renderAlbum();
+  });
+}
+
+function setupFilters() {
+  const filterBtns = document.querySelectorAll('.btn-filter');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderAlbum();
+    });
+  });
+}
+
+// 6. DETAIL MODAL & DOWNLOAD GAMBAR KE DISK (Fitur 4)
+function openCardDetail(card) {
+  activeSelectedCard = card;
+  document.getElementById('modalRarityBadge').textContent = card.rarity;
+  document.getElementById('modalRarityBadge').className = `rarity-badge ${card.rarity}`;
+  document.getElementById('modalCardImg').src = card.image_url;
+  document.getElementById('modalCardName').textContent = card.name;
+  document.getElementById('modalCardAnime').textContent = card.anime;
+  document.getElementById('modalCardArtist').textContent = `Artist: ${card.artist || 'AniList'}`;
+  document.getElementById('cardModal').classList.remove('hidden');
+}
+
+document.getElementById('btnCloseModal').addEventListener('click', () => {
+  document.getElementById('cardModal').classList.add('hidden');
+});
+
+// Fitur Download Kartu ke Penyimpanan
+document.getElementById('btnDownloadCard').addEventListener('click', async () => {
+  if (!activeSelectedCard) return;
+
+  const btn = document.getElementById('btnDownloadCard');
+  btn.textContent = '⏳ Mengunduh...';
+
+  try {
+    const res = await fetch(activeSelectedCard.image_url);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const cleanName = activeSelectedCard.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    a.download = `${cleanName}_${activeSelectedCard.rarity}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    btn.textContent = '✅ Berhasil Diunduh!';
+    setTimeout(() => { btn.textContent = '📥 Unduh Kartu ke Perangkat'; }, 2000);
+  } catch (err) {
+    // Fallback jika direct fetch terhalang header cors
+    window.open(activeSelectedCard.image_url, '_blank');
+    btn.textContent = '📥 Unduh Kartu ke Perangkat';
+  }
+});
+
+// 7. MODAL INFO ATURAN & PREVIEW SSR (Fitur 1)
+function setupRulesModal() {
+  document.getElementById('btnOpenRules').addEventListener('click', () => {
+    document.getElementById('rulesModal').classList.remove('hidden');
+  });
+
+  document.getElementById('btnCloseRules').addEventListener('click', () => {
+    document.getElementById('rulesModal').classList.add('hidden');
+  });
+}
+
+function renderSSRPoolPreview() {
+  const ssrGrid = document.getElementById('ssrPoolGrid');
+  if (!ssrGrid) return;
+  ssrGrid.innerHTML = '';
+
+  const ssrCards = cardPool.filter(c => c.rarity === 'SSR').slice(0, 8);
+  ssrCards.forEach(c => {
+    const thumb = document.createElement('div');
+    thumb.className = 'ssr-pool-thumb';
+    thumb.title = `${c.name} (${c.anime})`;
+    thumb.innerHTML = `<img src="${c.image_url}" loading="lazy" alt="${c.name}">`;
+    ssrGrid.appendChild(thumb);
+  });
+}
+
+// 8. TUKAR STAR SHARD & STATISTIK
 document.getElementById('btnTradeShard').addEventListener('click', async () => {
   if (currentUser.shards < 5) {
     alert('Star Shard tidak cukup (minimal 5).');
@@ -194,48 +387,6 @@ document.getElementById('btnTradeShard').addEventListener('click', async () => {
   }
 });
 
-// Album Koleksi
-function renderAlbum(filterRarity) {
-  const grid = document.getElementById('albumGrid');
-  grid.innerHTML = '';
-
-  const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
-  let filteredCards = cardPool.filter(c => ownedCardIds.includes(c.id));
-
-  if (filterRarity !== 'ALL') {
-    filteredCards = filteredCards.filter(c => c.rarity === filterRarity);
-  }
-
-  document.getElementById('albumTotalCount').textContent = ownedCardIds.length;
-  document.getElementById('emptyAlbumMsg').classList.toggle('hidden', filteredCards.length > 0);
-
-  filteredCards.forEach(card => {
-    const item = document.createElement('div');
-    item.className = 'album-card-item';
-    item.innerHTML = `
-      <div class="rarity-badge ${card.rarity}">${card.rarity}</div>
-      <img src="${card.image_url}" loading="lazy" alt="${card.name}">
-    `;
-    item.addEventListener('click', () => openCardDetail(card));
-    grid.appendChild(item);
-  });
-}
-
-function openCardDetail(card) {
-  document.getElementById('modalRarityBadge').textContent = card.rarity;
-  document.getElementById('modalRarityBadge').className = `rarity-badge ${card.rarity}`;
-  document.getElementById('modalCardImg').src = card.image_url;
-  document.getElementById('modalCardName').textContent = card.name;
-  document.getElementById('modalCardAnime').textContent = card.anime;
-  document.getElementById('modalCardArtist').textContent = `Artist: ${card.artist || '-'}`;
-  document.getElementById('cardModal').classList.remove('hidden');
-}
-
-document.getElementById('btnCloseModal').addEventListener('click', () => {
-  document.getElementById('cardModal').classList.add('hidden');
-});
-
-// Statistik Profil
 function updateStats() {
   const total = currentUser.total_pulls || 0;
   const ownedIds = [...new Set(userInventory.map(i => i.card_id))];
@@ -264,17 +415,6 @@ function setupTabs() {
       document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(btn.dataset.tab).classList.add('active');
-    });
-  });
-}
-
-function setupFilters() {
-  const filterBtns = document.querySelectorAll('.btn-filter');
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderAlbum(btn.dataset.filter);
     });
   });
 }
