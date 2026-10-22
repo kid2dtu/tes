@@ -8,54 +8,200 @@ let currentSort = 'date';
 let lastKnownTickets = currentUser ? Number(currentUser.tickets || 0) : 0;
 const syncChannel = new BroadcastChannel('gacha_sync');
 
-// Database Karakter & Seri Anime
+// Database Karakter Super Lengkap (150+ Karakter)
 const ANIME_CHARACTER_DATABASE = [
-  { char: 'Shirakami Fubuki', anime: 'Hololive' },
+  // --- RE:ZERO & KONOSUBA ---
   { char: 'Rem', anime: 'Re:Zero' },
+  { char: 'Ram', anime: 'Re:Zero' },
   { char: 'Emilia', anime: 'Re:Zero' },
+  { char: 'Beatrice', anime: 'Re:Zero' },
+  { char: 'Echidna', anime: 'Re:Zero' },
   { char: 'Megumin', anime: 'KonoSuba' },
   { char: 'Aqua', anime: 'KonoSuba' },
-  { char: 'Kurumi Tokisaki', anime: 'Date A Live' },
-  { char: 'Marin Kitagawa', anime: 'My Dress-Up Darling' },
-  { char: 'Yor Forger', anime: 'Spy × Family' },
-  { char: 'Anya Forger', anime: 'Spy × Family' },
+  { char: 'Darkness', anime: 'KonoSuba' },
+  { char: 'Yunyun', anime: 'KonoSuba' },
+  { char: 'Wiz', anime: 'KonoSuba' },
+
+  // --- GENSHIN IMPACT ---
   { char: 'Raiden Shogun', anime: 'Genshin Impact' },
   { char: 'Hu Tao', anime: 'Genshin Impact' },
   { char: 'Furina', anime: 'Genshin Impact' },
   { char: 'Ganyu', anime: 'Genshin Impact' },
+  { char: 'Kamisato Ayaka', anime: 'Genshin Impact' },
+  { char: 'Keqing', anime: 'Genshin Impact' },
+  { char: 'Yelan', anime: 'Genshin Impact' },
+  { char: 'Nahida', anime: 'Genshin Impact' },
+  { char: 'Navia', anime: 'Genshin Impact' },
+  { char: 'Arlecchino', anime: 'Genshin Impact' },
+  { char: 'Yoimiya', anime: 'Genshin Impact' },
+  { char: 'Shenhe', anime: 'Genshin Impact' },
+  { char: 'Nilou', anime: 'Genshin Impact' },
+  { char: 'Eula', anime: 'Genshin Impact' },
+  { char: 'Yae Miko', anime: 'Genshin Impact' },
+
+  // --- HONKAI: STAR RAIL ---
   { char: 'Firefly', anime: 'Honkai: Star Rail' },
   { char: 'Kafka', anime: 'Honkai: Star Rail' },
   { char: 'Sparkle', anime: 'Honkai: Star Rail' },
   { char: 'March 7th', anime: 'Honkai: Star Rail' },
-  { char: 'Asuna Yuuki', anime: 'Sword Art Online' },
-  { char: 'Sinon', anime: 'Sword Art Online' },
-  { char: 'Zero Two', anime: 'Darling in the Franxx' },
-  { char: 'Makima', anime: 'Chainsaw Man' },
-  { char: 'Power', anime: 'Chainsaw Man' },
+  { char: 'Robin', anime: 'Honkai: Star Rail' },
+  { char: 'Acheron', anime: 'Honkai: Star Rail' },
+  { char: 'Ruan Mei', anime: 'Honkai: Star Rail' },
+  { char: 'Silver Wolf', anime: 'Honkai: Star Rail' },
+  { char: 'Black Swan', anime: 'Honkai: Star Rail' },
+  { char: 'Feixiao', anime: 'Honkai: Star Rail' },
+  { char: 'Topaz', anime: 'Honkai: Star Rail' },
+  { char: 'Tingyun', anime: 'Honkai: Star Rail' },
+  { char: 'Fu Xuan', anime: 'Honkai: Star Rail' },
+  { char: 'Seele', anime: 'Honkai: Star Rail' },
+
+  // --- BLUE ARCHIVE ---
+  { char: 'Shiroko', anime: 'Blue Archive' },
+  { char: 'Hina', anime: 'Blue Archive' },
+  { char: 'Yuuka', anime: 'Blue Archive' },
+  { char: 'Mika', anime: 'Blue Archive' },
+  { char: 'Aris', anime: 'Blue Archive' },
+  { char: 'Asuna', anime: 'Blue Archive' },
+  { char: 'Karin', anime: 'Blue Archive' },
+  { char: 'Aru', anime: 'Blue Archive' },
+  { char: 'Wakamo', anime: 'Blue Archive' },
+  { char: 'Hanako', anime: 'Blue Archive' },
+  { char: 'Koharu', anime: 'Blue Archive' },
+  { char: 'Azusa', anime: 'Blue Archive' },
+
+  // --- FATE SERIES ---
+  { char: 'Saber (Artoria)', anime: 'Fate/stay night' },
+  { char: 'Rin Tohsaka', anime: 'Fate/stay night' },
+  { char: 'Illyasviel', anime: 'Fate/stay night' },
+  { char: 'Sakura Matou', anime: 'Fate/stay night' },
+  { char: 'Mash Kyrielight', anime: 'Fate/Grand Order' },
+  { char: 'Jeanne d Arc', anime: 'Fate/Grand Order' },
+  { char: 'Morgan', anime: 'Fate/Grand Order' },
+  { char: 'Nero Claudius', anime: 'Fate/EXTRA' },
+  { char: 'Ishtar', anime: 'Fate/Grand Order' },
+  { char: 'Ereshkigal', anime: 'Fate/Grand Order' },
+  { char: 'Okita Souji', anime: 'Fate/Grand Order' },
+  { char: 'Castoria', anime: 'Fate/Grand Order' },
+
+  // --- BOCCHI THE ROCK! & LYCORIS RECOIL ---
+  { char: 'Hitori Gotoh (Bocchi)', anime: 'Bocchi the Rock!' },
+  { char: 'Kita Ikuyo', anime: 'Bocchi the Rock!' },
+  { char: 'Nijika Ijichi', anime: 'Bocchi the Rock!' },
+  { char: 'Ryo Yamada', anime: 'Bocchi the Rock!' },
+  { char: 'Kikuri Hiroi', anime: 'Bocchi the Rock!' },
   { char: 'Chisato Nishikigi', anime: 'Lycoris Recoil' },
   { char: 'Takina Inoue', anime: 'Lycoris Recoil' },
-  { char: 'Hitori Gotoh', anime: 'Bocchi the Rock!' },
-  { char: 'Kita Ikuyo', anime: 'Bocchi the Rock!' },
+
+  // --- FRIEREN & DUNGEON MESHI ---
   { char: 'Frieren', anime: 'Sousou no Frieren' },
   { char: 'Fern', anime: 'Sousou no Frieren' },
+  { char: 'Ubel', anime: 'Sousou no Frieren' },
+  { char: 'Marcille Donato', anime: 'Dungeon Meshi' },
+
+  // --- OSHI NO KO & KAGUYA-SAMA ---
+  { char: 'Ai Hoshino', anime: 'Oshi no Ko' },
+  { char: 'Ruby Hoshino', anime: 'Oshi no Ko' },
+  { char: 'Kana Arima', anime: 'Oshi no Ko' },
+  { char: 'Akane Kurokawa', anime: 'Oshi no Ko' },
+  { char: 'Mem-Cho', anime: 'Oshi no Ko' },
   { char: 'Kaguya Shinomiya', anime: 'Kaguya-sama: Love is War' },
   { char: 'Chika Fujiwara', anime: 'Kaguya-sama: Love is War' },
-  { char: 'Saber', anime: 'Fate/stay night' },
-  { char: 'Rin Tohsaka', anime: 'Fate/stay night' },
-  { char: 'Mash Kyrielight', anime: 'Fate/Grand Order' },
+  { char: 'Miko Iino', anime: 'Kaguya-sama: Love is War' },
+  { char: 'Ai Hayasaka', anime: 'Kaguya-sama: Love is War' },
+
+  // --- SPY X FAMILY & CHAINSAW MAN ---
+  { char: 'Yor Forger', anime: 'Spy × Family' },
+  { char: 'Anya Forger', anime: 'Spy × Family' },
+  { char: 'Makima', anime: 'Chainsaw Man' },
+  { char: 'Power', anime: 'Chainsaw Man' },
+  { char: 'Reze', anime: 'Chainsaw Man' },
+  { char: 'Kobeni', anime: 'Chainsaw Man' },
+
+  // --- SWORD ART ONLINE & DARLING IN THE FRANXX ---
+  { char: 'Asuna Yuuki', anime: 'Sword Art Online' },
+  { char: 'Sinon (Asada Shino)', anime: 'Sword Art Online' },
+  { char: 'Alice Synthesis Thirty', anime: 'Sword Art Online' },
+  { char: 'Yuuki Konno', anime: 'Sword Art Online' },
+  { char: 'Silica', anime: 'Sword Art Online' },
+  { char: 'Lisbeth', anime: 'Sword Art Online' },
+  { char: 'Zero Two', anime: 'Darling in the Franxx' },
+  { char: 'Ichigo', anime: 'Darling in the Franxx' },
+
+  // --- VTUBER / HOLOLIVE ---
+  { char: 'Shirakami Fubuki', anime: 'Hololive' },
+  { char: 'Usada Pekora', anime: 'Hololive' },
+  { char: 'Houshou Marine', anime: 'Hololive' },
+  { char: 'Hoshimachi Suisei', anime: 'Hololive' },
+  { char: 'Sakura Miko', anime: 'Hololive' },
+  { char: 'Inugami Korone', anime: 'Hololive' },
+  { char: 'Gawr Gura', anime: 'Hololive' },
+  { char: 'Mori Calliope', anime: 'Hololive' },
+  { char: 'Minato Aqua', anime: 'Hololive' },
+
+  // --- ROMCOM & SLICE OF LIFE HITS ---
+  { char: 'Marin Kitagawa', anime: 'My Dress-Up Darling' },
+  { char: 'Kurumi Tokisaki', anime: 'Date A Live' },
+  { char: 'Tohka Yatogami', anime: 'Date A Live' },
+  { char: 'Kotori Itsuka', anime: 'Date A Live' },
+  { char: 'Origami Tobiichi', anime: 'Date A Live' },
+  { char: 'Mai Sakurajima', anime: 'Seishun Buta Yarou' },
+  { char: 'Shoko Makinohara', anime: 'Seishun Buta Yarou' },
+  { char: 'Yukino Yukinoshita', anime: 'Oregairu' },
+  { char: 'Yui Yuigahama', anime: 'Oregairu' },
+  { char: 'Iroha Isshiki', anime: 'Oregairu' },
+  { char: 'Chizuru Mizuhara', anime: 'Rent-a-Girlfriend' },
+  { char: 'Ruka Sarashina', anime: 'Rent-a-Girlfriend' },
+  { char: 'Komi Shouko', anime: 'Komi Can t Communicate' },
+  { char: 'Hori Kyouko', anime: 'Horimiya' },
+  { char: 'Nino Nakano', anime: 'The Quintessential Quintuplets' },
+  { char: 'Miku Nakano', anime: 'The Quintessential Quintuplets' },
+  { char: 'Itsuki Nakano', anime: 'The Quintessential Quintuplets' },
+  { char: 'Yotsuba Nakano', anime: 'The Quintessential Quintuplets' },
+  { char: 'Ichika Nakano', anime: 'The Quintessential Quintuplets' },
+
+  // --- ISEKAI & FANTASY ---
   { char: 'Roxy Migurdia', anime: 'Mushoku Tensei' },
   { char: 'Sylphiette', anime: 'Mushoku Tensei' },
-  { char: 'Eris Boreas', anime: 'Mushoku Tensei' },
+  { char: 'Eris Boreas Greyrat', anime: 'Mushoku Tensei' },
+  { char: 'Raphtalia', anime: 'The Rising of the Shield Hero' },
+  { char: 'Filo', anime: 'The Rising of the Shield Hero' },
   { char: 'Holo', anime: 'Spice and Wolf' },
   { char: 'Senko-san', anime: 'Sewayaki Kitsune no Senko-san' },
-  { char: 'Raphtalia', anime: 'The Rising of the Shield Hero' },
+  { char: 'Kanna Kamui', anime: 'Miss Kobayashi s Dragon Maid' },
+  { char: 'Tohru', anime: 'Miss Kobayashi s Dragon Maid' },
+  { char: 'Elma', anime: 'Miss Kobayashi s Dragon Maid' },
+  { char: 'Lucoa', anime: 'Miss Kobayashi s Dragon Maid' },
+  { char: 'Shuna', anime: 'That Time I Got Reincarnated as a Slime' },
+  { char: 'Shion', anime: 'That Time I Got Reincarnated as a Slime' },
+  { char: 'Milim Nava', anime: 'That Time I Got Reincarnated as a Slime' },
+  { char: 'Albedo', anime: 'Overlord' },
+  { char: 'Shalltear Bloodfallen', anime: 'Overlord' },
+
+  // --- SHOUNEN & ACTION ---
   { char: 'Nezuko Kamado', anime: 'Demon Slayer' },
   { char: 'Shinobu Kocho', anime: 'Demon Slayer' },
+  { char: 'Mitsuri Kanroji', anime: 'Demon Slayer' },
+  { char: 'Kanao Tsuyuri', anime: 'Demon Slayer' },
+  { char: 'Nobara Kugisaki', anime: 'Jujutsu Kaisen' },
+  { char: 'Maki Zenin', anime: 'Jujutsu Kaisen' },
+  { char: 'Ochaco Uraraka', anime: 'My Hero Academia' },
+  { char: 'Tsuyu Asui', anime: 'My Hero Academia' },
+  { char: 'Toga Himiko', anime: 'My Hero Academia' },
+  { char: 'Mikasa Ackerman', anime: 'Attack on Titan' },
+  { char: 'Historia Reiss', anime: 'Attack on Titan' },
+
+  // --- KLASIK / LEGENDARIS & VOCALOID ---
   { char: 'Hatsune Miku', anime: 'Vocaloid' },
-  { char: 'Kanna Kamui', anime: "Miss Kobayashi's Dragon Maid" },
-  { char: 'Tohru', anime: "Miss Kobayashi's Dragon Maid" },
-  { char: 'Shiroko', anime: 'Blue Archive' },
-  { char: 'Hina', anime: 'Blue Archive' }
+  { char: 'Kagamine Rin', anime: 'Vocaloid' },
+  { char: 'Megurine Luka', anime: 'Vocaloid' },
+  { char: 'Taiga Aisaka', anime: 'Toradora!' },
+  { char: 'Violet Evergarden', anime: 'Violet Evergarden' },
+  { char: 'C.C.', anime: 'Code Geass' },
+  { char: 'Kallen Stadtfeld', anime: 'Code Geass' },
+  { char: 'Rias Gremory', anime: 'High School DxD' },
+  { char: 'Akeno Himejima', anime: 'High School DxD' },
+  { char: 'Lucy Heartfilia', anime: 'Fairy Tail' },
+  { char: 'Erza Scarlet', anime: 'Fairy Tail' }
 ];
 
 function resolveCardIdentity(card) {
@@ -377,7 +523,6 @@ if (btnGacha) {
       currentUser.tickets = Math.max(0, currentUser.tickets - 1);
       lastKnownTickets = currentUser.tickets;
       
-      // Simpan di akhir array agar seragam dengan database server
       currentUser.koleksi.push(newCard);
       localStorage.setItem('gacha_user', JSON.stringify(currentUser));
       document.getElementById('txtTiket').innerText = currentUser.tickets;
@@ -462,7 +607,6 @@ function renderGallery(filter = 'all') {
       }
       return b._origIdx - a._origIdx;
     } else {
-      // Default: Waktu Diperoleh Terbaru Selalu di Paling Atas
       if (b.timestamp && a.timestamp && b.timestamp !== a.timestamp) {
         return b.timestamp - a.timestamp;
       }
