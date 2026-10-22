@@ -1,4 +1,4 @@
-const CACHE_NAME = 'animegacha-v2';
+const CACHE_NAME = 'animegacha-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -8,13 +8,15 @@ const ASSETS_TO_CACHE = [
   '/icon.png'
 ];
 
+// 1. Install & Force Update
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
-  self.skipWaiting();
 });
 
+// 2. Bersihkan Cache Versi Lama Otomatis
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
@@ -26,23 +28,47 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
+// 3. Strategi Network-First untuk File Web (Biar Update Selalu Masuk)
 self.addEventListener('fetch', (e) => {
-  // Jangan cache request ke Google Apps Script dan gambar luar (AniList)
-  if (e.request.url.includes('script.google.com') || e.request.url.includes('anilist.co')) {
+  const url = e.request.url;
+
+  // Lewatkan request API eksternal
+  if (url.includes('script.google.com') || url.includes('anilist.co') || url.includes('wsrv.nl')) {
     return;
   }
+
   e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
+    fetch(e.request)
+      .then((networkRes) => {
+        // Jika online, simpan versi terbaru ke cache
+        if (networkRes && networkRes.status === 200 && e.request.method === 'GET') {
+          const resClone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+        }
+        return networkRes;
+      })
+      .catch(() => caches.match(e.request)) // Cadangan saat offline
   );
 });
 
+// 4. Delegasi Penampil Notifikasi di Level Service Worker
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'TRIGGER_NOTIFICATION') {
+    const { title, options } = e.data;
+    self.registration.showNotification(title, {
+      ...options,
+      icon: '/icon.png',
+      badge: '/icon.png'
+    });
+  }
+});
+
+// 5. Klik Notifikasi Membuka Web PWA
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      if (clientList.length > 0) {
-        return clientList[0].focus();
-      }
+      if (clientList.length > 0) return clientList[0].focus();
       return clients.openWindow('/');
     })
   );
