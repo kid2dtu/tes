@@ -3,104 +3,186 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - AnimeGacha</title>
+  <title>Dashboard Admin - AnimeGacha</title>
   <link rel="icon" type="image/png" href="/icon.png">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
-    body { background:#0f172a; color:#f8fafc; padding:20px; }
-    .container { max-width:900px; margin:0 auto; }
-    .card { background:#1e293b; padding:20px; border-radius:12px; margin-bottom:20px; border:1px solid #334155; }
-    input, select, button { padding:10px 14px; border-radius:8px; border:1px solid #475569; font-size:0.95rem; }
-    input, select { background:#0f172a; color:white; width:100%; margin-bottom:10px; }
-    button { background:#38bdf8; color:#0f172a; font-weight:700; border:none; cursor:pointer; }
-    button:hover { background:#0ea5e9; }
-    .btn-del { background:#ef4444; color:white; padding:6px 12px; }
+    body { background:#0a0d18; color:#f8fafc; padding:24px 16px; min-height:100vh; }
+    .container { max-width:960px; margin:0 auto; }
+    
+    .card { background:#151a2d; padding:22px; border-radius:16px; margin-bottom:20px; border:1px solid #252d4a; box-shadow:0 10px 25px rgba(0,0,0,0.4); }
+    input, select, textarea, button { padding:10px 14px; border-radius:10px; border:1px solid #333f66; font-size:0.9rem; }
+    input, select, textarea { background:#0c101d; color:white; width:100%; margin-bottom:12px; }
+    textarea { resize:vertical; min-height:75px; }
+    button { background:#38bdf8; color:#0b1329; font-weight:700; border:none; cursor:pointer; transition:0.2s; }
+    button:hover { filter:brightness(1.15); }
+    
+    .btn-action { padding:7px 12px; font-size:0.8rem; border-radius:8px; }
+    .btn-del { background:#ef4444; color:white; }
+    .btn-reset { background:#8b5cf6; color:white; }
+    .btn-broadcast { background:linear-gradient(90deg, #ec4899, #8b5cf6); color:white; font-size:1rem; padding:12px; width:100%; }
+    
     table { width:100%; border-collapse:collapse; margin-top:10px; }
-    th, td { padding:10px; border-bottom:1px solid #334155; text-align:left; font-size:0.85rem; }
-    th { background:#111827; }
+    th, td { padding:12px 10px; border-bottom:1px solid #202742; text-align:left; font-size:0.85rem; vertical-align:middle; }
+    th { background:#101424; color:#94a3b8; font-weight:600; }
+    .img-preview { width:46px; height:65px; object-fit:cover; border-radius:8px; border:1px solid #3b82f6; }
+    
     .hidden { display:none; }
-    .img-preview { width:45px; height:60px; object-fit:cover; border-radius:6px; }
-    .logo-header { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
-    .logo-header img { width:36px; height:36px; border-radius:8px; }
+    .header-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+    .logo-header { display:flex; align-items:center; gap:12px; }
+    .logo-header img { width:40px; height:40px; border-radius:10px; box-shadow:0 0 14px rgba(255,94,154,0.3); }
+
+    /* Navigasi Sub Menu */
+    .admin-nav { display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid #252d4a; padding-bottom:12px; }
+    .nav-tab-btn { flex:1; padding:12px; background:#111526; color:#94a3b8; border:1px solid #202742; font-size:0.95rem; font-weight:600; }
+    .nav-tab-btn.active { background:#38bdf8; color:#0b1329; border-color:#38bdf8; }
+
+    /* Rarity Badge */
+    .badge { padding:3px 8px; border-radius:6px; font-weight:700; font-size:0.75rem; display:inline-block; }
+    .badge-SSR { background:#f59e0b; color:#000; }
+    .badge-SR { background:#8b5cf6; color:#fff; }
+    .badge-R { background:#3b82f6; color:#fff; }
+
+    /* Search Box */
+    .search-row { display:flex; gap:10px; margin-bottom:14px; }
+    .search-row input { margin-bottom:0; }
   </style>
 </head>
 <body>
   <div class="container">
     <!-- Panel Login Admin -->
-    <div id="adminAuthBox" class="card" style="max-width:400px; margin:80px auto; text-align:center;">
-      <img src="/icon.png" style="width:60px; height:60px; border-radius:12px; margin-bottom:10px;" alt="Logo">
-      <h2>🔑 Masuk Admin</h2>
-      <p style="margin-bottom:14px; font-size:0.85rem; color:#94a3b8;">Kelola database kartu & pemain.</p>
-      <input type="password" id="adminKeyInput" placeholder="Kunci Rahasia Admin">
-      <button id="btnAdminLogin" style="width:100%;">Buka Dashboard</button>
-      <div id="loginErr" style="color:#ef4444; font-size:0.85rem; margin-top:8px;"></div>
+    <div id="adminAuthBox" class="card" style="max-width:380px; margin:90px auto; text-align:center;">
+      <img src="/icon.png" style="width:64px; height:64px; border-radius:14px; margin-bottom:12px;" alt="Logo">
+      <h2>🔑 Kunci Akses Admin</h2>
+      <p style="margin:6px 0 16px; font-size:0.85rem; color:#94a3b8;">Masukkan master key untuk mengelola game.</p>
+      <input type="password" id="adminKeyInput" placeholder="Kunci Rahasia (elin1234)">
+      <button id="btnAdminLogin" style="width:100%; padding:12px;">Masuk ke Dashboard</button>
+      <div id="loginErr" style="color:#ef4444; font-size:0.85rem; margin-top:10px;"></div>
     </div>
 
-    <!-- Panel Konten Admin -->
+    <!-- Panel Utama Dashboard -->
     <div id="adminPanel" class="hidden">
-      <div class="logo-header">
-        <img src="/icon.png" alt="Logo">
-        <h1>Dashboard Pengelola Gacha</h1>
-      </div>
-
-      <!-- Tambah Kartu -->
-      <div class="card">
-        <h2>➕ Tambah Kartu Gacha Baru</h2>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <input type="text" id="cardName" placeholder="Nama Karakter">
-          <input type="text" id="cardAnime" placeholder="Asal Anime">
-          <select id="cardRarity">
-            <option value="SSR">SSR (Super Super Rare)</option>
-            <option value="SR">SR (Super Rare)</option>
-            <option value="R">R (Rare)</option>
-          </select>
-          <input type="text" id="cardArtist" placeholder="Nama Artis">
+      <div class="header-bar">
+        <div class="logo-header">
+          <img src="/icon.png" alt="Logo">
+          <div>
+            <h2>AnimeGacha Admin Center</h2>
+            <small style="color:#94a3b8;">Terhubung ke Google Sheets Database</small>
+          </div>
         </div>
-        <input type="url" id="cardImg" placeholder="Link URL Gambar (https://...)">
-        <button id="btnAddCard">Simpan ke Pool Kartu</button>
+        <button id="btnReloadData" class="btn-action" style="background:#2563eb; color:white;">🔄 Segarkan Data</button>
       </div>
 
-      <!-- Tabel Pool Kartu -->
-      <div class="card">
-        <h2>🃏 Pool Kartu Aktif</h2>
-        <table id="cardsTable">
-          <thead>
-            <tr>
-              <th>Gambar</th>
-              <th>Nama</th>
-              <th>Anime</th>
-              <th>Rarity</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <!-- Navigasi 2 Sub Menu -->
+      <div class="admin-nav">
+        <button class="nav-tab-btn active" data-tab="tabUsers">👥 Pengelola User & Notifikasi</button>
+        <button class="nav-tab-btn" data-tab="tabCards">🃏 Pengelola Card Pool</button>
       </div>
 
-      <!-- Tabel Pemain -->
-      <div class="card">
-        <h2>👥 Data Akun Pemain</h2>
-        <table id="usersTable">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Tiket</th>
-              <th>Shard</th>
-              <th>Pity</th>
-              <th>Total Pull</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <!-- ==============================================
+           SUB MENU 1: PENGELOLA USER & NOTIFIKASI
+           ============================================== -->
+      <div id="tabUsers" class="sub-tab-content">
+        <!-- Kotak Broadcast Notifikasi -->
+        <div class="card" style="background:linear-gradient(135deg, #181d33, #151a2d); border-color:#8b5cf6;">
+          <h3 style="margin-bottom:6px; color:#c4b5fd;">📢 Kirim Notifikasi Broadcast ke Semua Pemain</h3>
+          <p style="font-size:0.82rem; color:#94a3b8; margin-bottom:14px;">
+            Pesan ini otomatis muncul di layar HP / browser seluruh pengguna saat mereka membuka game.
+          </p>
+          <input type="text" id="bcTitle" placeholder="Judul Pengumuman (Contoh: Update Banner Baru!)">
+          <textarea id="bcMessage" placeholder="Tulis isi pesan pengumuman di sini..."></textarea>
+          <button id="btnSendBroadcast" class="btn-broadcast">🚀 Kirim Notifikasi ke Seluruh User</button>
+        </div>
+
+        <!-- Tabel Manajemen User -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3>Daftar Pemain Terdaftar (<span id="userCount">0</span>)</h3>
+          </div>
+          <table id="usersTable">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Sisa Tiket</th>
+                <th>Shards</th>
+                <th>Pity</th>
+                <th>Total Pull</th>
+                <th>Aksi Admin</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
+
+      <!-- ==============================================
+           SUB MENU 2: PENGELOLA CARD POOL
+           ============================================== -->
+      <div id="tabCards" class="sub-tab-content hidden">
+        <!-- Form Tambah Kartu Baru -->
+        <div class="card">
+          <h3 style="margin-bottom:12px;">➕ Tambah Kartu Baru ke Pool Gacha</h3>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8;">Nama Karakter</label>
+              <input type="text" id="cardName" placeholder="Contoh: Kuriyama Mirai">
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8;">Anime Seri</label>
+              <input type="text" id="cardAnime" placeholder="Contoh: Kyoukai no Kanata">
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8;">Tingkat Kelangkaan (Rarity)</label>
+              <select id="cardRarity">
+                <option value="SSR">SSR (Super Super Rare - 5%)</option>
+                <option value="SR">SR (Super Rare - 25%)</option>
+                <option value="R">R (Rare Standar - 70%)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.75rem; color:#94a3b8;">Nama Artist / Sumber</label>
+              <input type="text" id="cardArtist" placeholder="AniList / Nama Kreator">
+            </div>
+          </div>
+          <label style="font-size:0.75rem; color:#94a3b8;">Link Gambar Potret HD (URL https://...)</label>
+          <input type="url" id="cardImg" placeholder="https://s4.anilist.co/file/anilistcdn/character/large/...">
+          <button id="btnAddCard" style="width:100%; padding:12px;">💾 Simpan Kartu ke Spreadsheet</button>
+        </div>
+
+        <!-- Tabel Pool Kartu -->
+        <div class="card">
+          <div class="search-row">
+            <input type="text" id="cardSearchInput" placeholder="🔍 Cari nama karakter atau anime di pool...">
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3>Daftar Kartu Aktif (<span id="cardCount">0</span>)</h3>
+          </div>
+          <table id="cardsTable">
+            <thead>
+              <tr>
+                <th>Gambar</th>
+                <th>Nama Karakter</th>
+                <th>Asal Anime</th>
+                <th>Rarity</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
     let activeAdminKey = "";
+    let rawCards = [];
+    let rawUsers = [];
 
+    // Login Admin
     document.getElementById('btnAdminLogin').addEventListener('click', async () => {
       const key = document.getElementById('adminKeyInput').value.trim();
       const err = document.getElementById('loginErr');
@@ -115,42 +197,167 @@
         activeAdminKey = key;
         document.getElementById('adminAuthBox').classList.add('hidden');
         document.getElementById('adminPanel').classList.remove('hidden');
-        renderDashboardData(res.cards, res.users);
+        rawCards = res.cards;
+        rawUsers = res.users;
+        renderAllData();
       } else {
         err.textContent = res.message;
       }
     });
 
-    function renderDashboardData(cards, users) {
-      const cardsTbody = document.querySelector('#cardsTable tbody');
-      cardsTbody.innerHTML = '';
-      cards.forEach(c => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><img src="${c[4]}" class="img-preview" alt="${c[1]}"></td>
-          <td><strong>${c[1]}</strong></td>
-          <td>${c[2]}</td>
-          <td>${c[3]}</td>
-          <td><button class="btn-del" onclick="deleteCard('${c[0]}')">Hapus</button></td>
-        `;
-        cardsTbody.appendChild(tr);
-      });
+    // Refresh Data
+    document.getElementById('btnReloadData').addEventListener('click', async () => {
+      const btn = document.getElementById('btnReloadData');
+      btn.textContent = 'Memuat...';
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'admin_get_data', admin_key: activeAdminKey })
+      }).then(r => r.json());
 
-      const usersTbody = document.querySelector('#usersTable tbody');
-      usersTbody.innerHTML = '';
+      btn.textContent = '🔄 Segarkan Data';
+      if (res.status === 'success') {
+        rawCards = res.cards;
+        rawUsers = res.users;
+        renderAllData();
+        alert('Data berhasil diperbarui!');
+      }
+    });
+
+    // Navigasi Antar Tab
+    document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    function renderAllData() {
+      renderUsers(rawUsers);
+      renderCards(rawCards);
+    }
+
+    // Render Tabel User
+    function renderUsers(users) {
+      document.getElementById('userCount').textContent = users.length;
+      const tbody = document.querySelector('#usersTable tbody');
+      tbody.innerHTML = '';
+
       users.forEach(u => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${u[0]}</td>
+          <td><strong>${u[0]}</strong></td>
           <td>${u[2]} 🎟️</td>
           <td>${u[3]} ⭐</td>
           <td>${u[4]} / 30</td>
           <td>${u[5]}</td>
+          <td>
+            <button class="btn-action btn-reset" onclick="openResetTicketModal('${u[0]}', ${u[2]})">
+              ✏️ Atur Tiket
+            </button>
+          </td>
         `;
-        usersTbody.appendChild(tr);
+        tbody.appendChild(tr);
       });
     }
 
+    // Aksi Reset/Ubah Tiket User + Kirim Notif
+    async function openResetTicketModal(username, currentTickets) {
+      const inputTiket = prompt(`Ubah jumlah tiket untuk [${username}]:`, currentTickets);
+      if (inputTiket === null) return;
+
+      const ticketsNum = parseInt(inputTiket, 10);
+      if (isNaN(ticketsNum) || ticketsNum < 0) {
+        alert('Jumlah tiket harus berupa angka positif!');
+        return;
+      }
+
+      const notifMsg = prompt(`Pesan notifikasi untuk [${username}]:`, `Admin telah memperbarui tiketmu menjadi ${ticketsNum} 🎟️!`);
+      if (notifMsg === null) return;
+
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'admin_update_user_tickets',
+          admin_key: activeAdminKey,
+          target_username: username,
+          new_tickets: ticketsNum,
+          custom_message: notifMsg
+        })
+      }).then(r => r.json());
+
+      alert(res.message);
+      if (res.status === 'success') {
+        document.getElementById('btnReloadData').click();
+      }
+    }
+
+    // Broadcast Notifikasi ke Semua Pemain
+    document.getElementById('btnSendBroadcast').addEventListener('click', async () => {
+      const title = document.getElementById('bcTitle').value.trim();
+      const message = document.getElementById('bcMessage').value.trim();
+
+      if (!message) {
+        alert('Isi pesan pengumuman tidak boleh kosong!');
+        return;
+      }
+
+      if (!confirm(`Kirim notifikasi ini ke SEMUA pemain?\n\n"${message}"`)) return;
+
+      const btn = document.getElementById('btnSendBroadcast');
+      btn.textContent = 'Mengirim...';
+      btn.disabled = true;
+
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'admin_send_broadcast',
+          admin_key: activeAdminKey,
+          title: title || 'Pemberitahuan AnimeGacha',
+          message: message
+        })
+      }).then(r => r.json());
+
+      btn.textContent = '🚀 Kirim Notifikasi ke Seluruh User';
+      btn.disabled = false;
+
+      alert(res.message);
+      if (res.status === 'success') {
+        document.getElementById('bcTitle').value = '';
+        document.getElementById('bcMessage').value = '';
+      }
+    });
+
+    // Render Tabel Cards & Search
+    function renderCards(cards) {
+      document.getElementById('cardCount').textContent = cards.length;
+      const tbody = document.querySelector('#cardsTable tbody');
+      tbody.innerHTML = '';
+
+      cards.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><img src="${c[4]}" class="img-preview" alt="${c[1]}" loading="lazy"></td>
+          <td><strong>${c[1]}</strong></td>
+          <td>${c[2]}</td>
+          <td><span class="badge badge-${c[3]}">${c[3]}</span></td>
+          <td><button class="btn-action btn-del" onclick="deleteCard('${c[0]}')">Hapus</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('cardSearchInput').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = rawCards.filter(c => 
+        c[1].toString().toLowerCase().includes(q) || 
+        c[2].toString().toLowerCase().includes(q)
+      );
+      renderCards(filtered);
+    });
+
+    // Tambah Kartu
     document.getElementById('btnAddCard').addEventListener('click', async () => {
       const name = document.getElementById('cardName').value.trim();
       const anime = document.getElementById('cardAnime').value.trim();
@@ -159,7 +366,7 @@
       const image_url = document.getElementById('cardImg').value.trim();
 
       if (!name || !image_url) {
-        alert('Nama dan URL Gambar wajib diisi!');
+        alert('Nama karakter dan link gambar wajib diisi!');
         return;
       }
 
@@ -172,16 +379,18 @@
         })
       }).then(r => r.json());
 
+      alert(res.message);
       if (res.status === 'success') {
-        alert('Kartu berhasil ditambah!');
-        location.reload();
-      } else {
-        alert(res.message);
+        document.getElementById('cardName').value = '';
+        document.getElementById('cardAnime').value = '';
+        document.getElementById('cardImg').value = '';
+        document.getElementById('btnReloadData').click();
       }
     });
 
+    // Hapus Kartu
     async function deleteCard(cardId) {
-      if (!confirm('Hapus kartu ini dari pool gacha?')) return;
+      if (!confirm('Hapus kartu ini dari database pool?')) return;
       const res = await fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({
@@ -191,9 +400,9 @@
         })
       }).then(r => r.json());
 
+      alert(res.message);
       if (res.status === 'success') {
-        alert('Kartu berhasil dihapus!');
-        location.reload();
+        document.getElementById('btnReloadData').click();
       }
     }
   </script>
