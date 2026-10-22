@@ -14,20 +14,37 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <!-- Modal Login / Registrasi -->
+  <!-- Modal Login / Registrasi Rapi & Estetik -->
   <div id="authModal" class="modal">
-    <div class="modal-box">
-      <div class="modal-icon">✨</div>
-      <h2>Masuk ke Akun</h2>
-      <p>Ketik username dan 4 digit PIN kamu untuk mulai gacha.</p>
-      <input type="text" id="authUsername" placeholder="Username (huruf/angka)" autocomplete="off">
-      <input type="password" id="authPin" placeholder="4 Digit PIN" maxlength="4" inputmode="numeric" pattern="[0-9]*">
-      <button id="btnLogin" class="btn-primary">Mulai Main</button>
+    <div class="modal-box auth-box">
+      <div class="auth-brand">
+        <div class="auth-logo-wrapper">
+          <img src="/icon.png" alt="AnimeGacha Logo" class="auth-logo">
+        </div>
+        <h2>Masuk ke Akun</h2>
+        <p>Ketik username dan 4 digit PIN kamu untuk mulai gacha.</p>
+      </div>
+
+      <div class="input-group">
+        <label for="authUsername">Username</label>
+        <input type="text" id="authUsername" placeholder="contoh: elin" autocomplete="off">
+      </div>
+
+      <div class="input-group">
+        <label for="authPin">PIN (4 Digit Angka)</label>
+        <input type="password" id="authPin" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+      </div>
+
+      <div class="auth-hint">
+        <span>ℹ️ Akun baru otomatis dibuat jika belum terdaftar.</span>
+      </div>
+
+      <button id="btnLogin" class="btn-primary btn-auth">Masuk / Daftar</button>
       <div id="authError" class="error-msg"></div>
     </div>
   </div>
 
-  <!-- Modal Aturan & Pool Karakter (Fitur 1) -->
+  <!-- Modal Aturan & Info Pool Gacha -->
   <div id="rulesModal" class="modal hidden">
     <div class="modal-box rules-box">
       <div class="modal-header">
@@ -87,7 +104,7 @@
     </div>
   </div>
 
-  <!-- Modal Detail & Unduh Kartu (Fitur 4) -->
+  <!-- Modal Detail & Unduh Kartu -->
   <div id="cardModal" class="modal hidden">
     <div class="modal-box card-detail-box">
       <button id="btnCloseModal" class="btn-close">&times;</button>
@@ -147,11 +164,10 @@
         </div>
       </div>
 
-      <!-- Stage Animasi Kartu Sleeve Mewah (Fitur 2) -->
+      <!-- Stage Animasi Kartu Sleeve Mewah -->
       <div class="card-stage">
         <div id="gachaCard" class="card">
           <div class="card-inner">
-            <!-- Sisi Belakang: Desain Card Sleeve Trading Card -->
             <div class="card-front tarot-back">
               <div class="sleeve-border">
                 <div class="sleeve-inner-pattern">
@@ -163,7 +179,6 @@
               <div class="shimmer-sweep"></div>
             </div>
 
-            <!-- Sisi Depan: Hasil Tarikan -->
             <div class="card-back">
               <div id="backRarity" class="rarity-badge">SSR</div>
               <img id="backImg" src="" alt="Hasil Gacha">
@@ -181,7 +196,7 @@
       </div>
     </section>
 
-    <!-- TAB 2: ALBUM KOLEKSI (Fitur 3) -->
+    <!-- TAB 2: ALBUM KOLEKSI -->
     <section id="tabAlbum" class="tab-content">
       <div class="album-controls">
         <div class="album-header-title">
@@ -189,7 +204,6 @@
           <span id="albumTotalCountBadge" class="count-pill">0 Kartu</span>
         </div>
 
-        <!-- Tombol Filter Rarity dengan Angka Real-time -->
         <div class="filter-group">
           <button class="btn-filter active" data-filter="ALL">Semua <span id="countFilterALL">(0)</span></button>
           <button class="btn-filter" data-filter="SSR">SSR <span id="countFilterSSR">(0)</span></button>
@@ -197,7 +211,6 @@
           <button class="btn-filter" data-filter="R">R <span id="countFilterR">(0)</span></button>
         </div>
 
-        <!-- Menu Pilihan Urutan -->
         <div class="sort-row">
           <span id="albumStatusText" class="album-status-text">Menampilkan 0 dari 0 koleksi</span>
           <select id="albumSort" class="select-sort">
@@ -212,7 +225,7 @@
       <div id="emptyAlbumMsg" class="empty-msg hidden">Koleksi masih kosong. Ayo tarik gacha pertamamu!</div>
     </section>
 
-    <!-- TAB 3: PROFIL & STATISTIK (Fitur 5) -->
+    <!-- TAB 3: PROFIL & STATISTIK -->
     <section id="tabProfile" class="tab-content">
       <div class="profile-card">
         <div class="profile-avatar">👤</div>
