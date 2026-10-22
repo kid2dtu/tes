@@ -767,7 +767,7 @@ function initGalleryControls() {
   });
 }
 
-// 11. Modal Pratinjau Penuh & Simpan Gambar
+// 11. Modal Pratinjau Penuh & Simpan Gambar Tanpa Buka Tab Baru
 function initCardDetailModal() {
   const modal = document.getElementById('modalCardDetail');
   const btnClose = document.getElementById('btnCloseDetail');
@@ -821,22 +821,61 @@ function openCardDetail(card) {
 }
 
 async function downloadCardImage(url, name) {
+  showToast('Mengunduh gambar...');
+  const filename = `${name.replace(/\s+/g, '_')}_gacha.png`;
+
   try {
-    showToast('Mengunduh gambar...');
     const res = await fetch(url);
+    if (!res.ok) throw new Error('Fetch gagal');
     const blob = await res.blob();
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    a.download = `${name.replace(/\s+/g, '_')}_gacha.png`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(blobUrl);
-    showToast('Gambar tersimpan di galeri! 💾');
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+    showToast('Gambar berhasil diunduh! 💾');
   } catch (e) {
-    window.open(url, '_blank');
+    // Fallback Canvas jika fetch terhambat CORS agar tetap langsung terunduh tanpa buka tab baru
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+          showToast('Gambar berhasil diunduh! 💾');
+        } else {
+          forceDirectAnchor(url, filename);
+        }
+      }, 'image/png');
+    };
+    img.onerror = () => forceDirectAnchor(url, filename);
+    img.src = url;
   }
+}
+
+function forceDirectAnchor(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('Gambar berhasil diunduh! 💾');
 }
 
 // 12. Penukaran Star Shard (5 Shard ➔ +1 Tiket)
