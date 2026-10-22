@@ -300,7 +300,7 @@ function renderUI() {
   renderGallery(currentFilter);
 }
 
-// 6. Tarik Gacha + Notifikasi Khusus SR / SSR
+// 6. Tarik Gacha + Format Waktu Diperoleh Lengkap
 const btnGacha = document.getElementById('btnTarikGacha');
 if (btnGacha) {
   btnGacha.addEventListener('click', async () => {
@@ -343,13 +343,20 @@ if (btnGacha) {
       const charName = (item.anime_name && item.anime_name !== 'Original Character') ? item.anime_name : identity.char;
       const animeName = identity.anime;
 
+      // Catat Tanggal & Jam Menit Presisi
+      const now = new Date();
+      const jam = String(now.getHours()).padStart(2, '0');
+      const menit = String(now.getMinutes()).padStart(2, '0');
+      const waktuLengkap = `${now.toLocaleDateString('id-ID')} ${jam}:${menit} WIB`;
+
       const newCard = {
         url: item.url,
         artist_name: item.artist_name || 'Artis Komunitas',
         character_name: charName,
         anime_name: animeName,
         rarity: rarity,
-        date: new Date().toLocaleDateString('id-ID')
+        date: waktuLengkap,
+        timestamp: now.getTime()
       };
 
       cardFront.className = `card-face card-front rarity-${rarity}`;
@@ -414,15 +421,12 @@ function renderGallery(filter = 'all') {
 
   container.innerHTML = '';
   
-  // Beri penanda urutan asli index agar sortir tanggal tetap konsisten (0 = terbaru)
   const cards = (currentUser && currentUser.koleksi) 
     ? currentUser.koleksi.map((c, idx) => ({ ...c, _origIdx: idx })) 
     : [];
 
-  // Filter Kelangkaan
   let filtered = filter === 'all' ? [...cards] : cards.filter(c => c.rarity === filter);
 
-  // Perbarui Angka Jumlah Koleksi
   if (countBadge) {
     countBadge.innerText = `${filtered.length} Kartu`;
   }
@@ -433,7 +437,7 @@ function renderGallery(filter = 'all') {
   }
   emptyBox.style.display = 'none';
 
-  // Logika Pengurutan
+  // Urutkan Sesuai Opsi
   const rarityRank = { 'SSR': 3, 'SR': 2, 'R': 1 };
   filtered.sort((a, b) => {
     if (currentSort === 'name') {
@@ -445,7 +449,7 @@ function renderGallery(filter = 'all') {
       if (rankDiff !== 0) return rankDiff;
       return a._origIdx - b._origIdx;
     } else {
-      // Default: Tanggal / Urutan dapat terbaru
+      // Default: Waktu Diperoleh (Terbaru = Index Paling Depan)
       return a._origIdx - b._origIdx;
     }
   });
@@ -471,7 +475,7 @@ function renderGallery(filter = 'all') {
         character_name: charName,
         anime_name: identity.anime,
         artist_name: c.artist_name || 'Artis Komunitas',
-        date: c.date || 'Hari ini'
+        date: c.date || 'Waktu tidak tercatat'
       });
     });
 
