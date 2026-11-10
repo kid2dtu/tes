@@ -1,11 +1,16 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
+const API_URL = (typeof CONFIG !== 'undefined' && CONFIG.API_URL)
+  ? CONFIG.API_URL
+  : "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
 
 let currentUser = null;
 let cardPool = [];
+let cardMap = new Map(); // O(1) lookup
 let userInventory = [];
+let inventoryCardIndexMap = new Map(); // O(1) last index lookup for recent sort
 let currentFilter = 'ALL';
 let currentSort = 'recent';
 let activeSelectedCard = null;
+let pollingTimer = null;
 
 // ==========================================
 // 1. SERVICE WORKER & SISTEM NOTIFIKASI
@@ -102,6 +107,8 @@ function scheduleMidnightResetNotification() {
 // Pengecek Notifikasi Personal & Broadcast Admin
 async function checkPendingNotifications() {
   if (!currentUser || !('Notification' in window) || Notification.permission !== 'granted') return;
+  // Jangan buang resource jaringan jika tab sedang diminimalkan/tidak aktif
+  if (document.hidden) return;
 
   try {
     const res = await fetch(`${API_URL}?action=check_notifications&username=${encodeURIComponent(currentUser.username)}`);
@@ -158,6 +165,82 @@ async function callAPI(payload) {
   }
 }
 
+function rebuildCardMap() {
+  cardMap.clear();
+  for (let i = 0; i < cardPool.length; i++) {
+    cardMap.set(cardPool[i].id, cardPool[i]);
+  }
+}
+
+function rebuildInventoryIndexMap() {
+  inventoryCardIndexMap.clear();
+  for (let i = 0; i < userInventory.length; i++) {
+    inventoryCardIndexMap.set(userInventory[i].card_id, i);
+  }
+}
+
+// Ambil Card Pool dengan strategi Stale-While-Revalidate
+async function loadCardPool() {
+  const cacheKey = (typeof CONFIG !== 'undefined' && CONFIG.CACHE_KEYS.CARD_POOL) || 'animegacha_card_pool_cache';
+
+  // 1. Render instan dari cache lokal (0ms)
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        cardPool = parsed;
+        rebuildCardMap();
+        renderSSRPoolPreview();
+        if (currentUser) {
+          updateStats();
+          updateAlbumCounts();
+          renderAlbum();
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Gagal membaca cache lokal:", e);
+  }
+
+  // 2. Fetch data terbaru di latar belakang
+  try {
+    const poolRes = await fetch(`${API_URL}?action=get_pool`);
+    const poolJson = await poolRes.json();
+    if (poolJson.status === 'success' && Array.isArray(poolJson.cards)) {
+      cardPool = poolJson.cards;
+      rebuildCardMap();
+      renderSSRPoolPreview();
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(cardPool));
+      } catch (e) {}
+
+      if (currentUser) {
+        updateStats();
+        updateAlbumCounts();
+        renderAlbum();
+      }
+    }
+  } catch (e) {
+    console.error("Gagal load kartu terbaru:", e);
+  }
+}
+
+// Inisialisasi Lifecycle & Visibility Listener
+function setupVisibilityAwarePolling() {
+  const intervalTime = (typeof CONFIG !== 'undefined' && CONFIG.POLLING_INTERVAL_MS) || 45000;
+
+  if (pollingTimer) clearInterval(pollingTimer);
+  pollingTimer = setInterval(checkPendingNotifications, intervalTime);
+
+  // Jika tab kembali aktif, langsung cek notifikasi pending
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && currentUser) {
+      checkPendingNotifications();
+    }
+  });
+}
+
 // ==========================================
 // 2. INISIALISASI APLIKASI
 // ==========================================
@@ -171,17 +254,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateNotifStatusUI(Notification.permission === 'granted');
   }
 
-  // Ambil Card Pool dari Sheets
-  try {
-    const poolRes = await fetch(`${API_URL}?action=get_pool`);
-    const poolJson = await poolRes.json();
-    if (poolJson.status === 'success') {
-      cardPool = poolJson.cards;
-      renderSSRPoolPreview();
-    }
-  } catch (e) {
-    console.error("Gagal load kartu:", e);
-  }
+  // Load pool kartu secara instan via cache lalu background update
+  loadCardPool();
 
   // Cek Status Sesi Login
   const savedUser = localStorage.getItem('gacha_user');
@@ -193,8 +267,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('authModal').classList.remove('hidden');
   }
 
-  // Polling Pengecekan Notifikasi Setiap 45 Detik
-  setInterval(checkPendingNotifications, 45000);
+  setupVisibilityAwarePolling();
 });
 
 // ==========================================
@@ -221,7 +294,7 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     errBox.textContent = '';
-    
+
     scheduleMidnightResetNotification();
     setTimeout(checkPendingNotifications, 1500);
   } else {
@@ -245,7 +318,8 @@ async function loginUser(username, pin) {
 function applyUserData(user, inventory) {
   currentUser = user;
   userInventory = inventory || [];
-  
+  rebuildInventoryIndexMap();
+
   document.getElementById('navUsername').textContent = user.username;
   document.getElementById('profileUsername').textContent = user.username;
   document.getElementById('ticketCount').textContent = user.tickets;
@@ -301,6 +375,10 @@ btnPull.addEventListener('click', async () => {
     }, 200);
 
     userInventory.push({ card_id: res.card.id, obtained_at: new Date().toISOString() });
+    if (!cardMap.has(res.card.id)) {
+      cardMap.set(res.card.id, res.card);
+      cardPool.push(res.card);
+    }
     applyUserData(currentUser, userInventory);
 
     if (res.is_duplicate) {
@@ -319,13 +397,25 @@ gachaCard.addEventListener('click', () => {
 // 5. ALBUM KOLEKSI (FILTER & SORTING)
 // ==========================================
 function updateAlbumCounts() {
-  const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
-  const ownedCards = cardPool.filter(c => ownedCardIds.includes(c.id));
+  const ownedIdSet = new Set();
+  for (let i = 0; i < userInventory.length; i++) {
+    ownedIdSet.add(userInventory[i].card_id);
+  }
 
-  const totalAll = ownedCards.length;
-  const countSSR = ownedCards.filter(c => c.rarity === 'SSR').length;
-  const countSR = ownedCards.filter(c => c.rarity === 'SR').length;
-  const countR = ownedCards.filter(c => c.rarity === 'R').length;
+  let totalAll = 0;
+  let countSSR = 0;
+  let countSR = 0;
+  let countR = 0;
+
+  ownedIdSet.forEach(id => {
+    const card = cardMap.get(id);
+    if (card) {
+      totalAll++;
+      if (card.rarity === 'SSR') countSSR++;
+      else if (card.rarity === 'SR') countSR++;
+      else if (card.rarity === 'R') countR++;
+    }
+  });
 
   document.getElementById('albumTotalCountBadge').textContent = `${totalAll} Kartu`;
   document.getElementById('countFilterALL').textContent = `(${totalAll})`;
@@ -338,17 +428,25 @@ function renderAlbum() {
   const grid = document.getElementById('albumGrid');
   grid.innerHTML = '';
 
-  const ownedCardIds = [...new Set(userInventory.map(i => i.card_id))];
-  let cardsToDisplay = cardPool.filter(c => ownedCardIds.includes(c.id));
-
-  if (currentFilter !== 'ALL') {
-    cardsToDisplay = cardsToDisplay.filter(c => c.rarity === currentFilter);
+  const ownedIdSet = new Set();
+  for (let i = 0; i < userInventory.length; i++) {
+    ownedIdSet.add(userInventory[i].card_id);
   }
+
+  let cardsToDisplay = [];
+  ownedIdSet.forEach(id => {
+    const card = cardMap.get(id);
+    if (card) {
+      if (currentFilter === 'ALL' || card.rarity === currentFilter) {
+        cardsToDisplay.push(card);
+      }
+    }
+  });
 
   if (currentSort === 'recent') {
     cardsToDisplay.sort((a, b) => {
-      const idxA = userInventory.map(x => x.card_id).lastIndexOf(a.id);
-      const idxB = userInventory.map(x => x.card_id).lastIndexOf(b.id);
+      const idxA = inventoryCardIndexMap.get(a.id) ?? -1;
+      const idxB = inventoryCardIndexMap.get(b.id) ?? -1;
       return idxB - idxA;
     });
   } else if (currentSort === 'name') {
@@ -358,10 +456,11 @@ function renderAlbum() {
     cardsToDisplay.sort((a, b) => (weight[b.rarity] || 0) - (weight[a.rarity] || 0));
   }
 
-  document.getElementById('albumStatusText').textContent = 
-    `Menampilkan ${cardsToDisplay.length} dari ${ownedCardIds.length} koleksi`;
+  document.getElementById('albumStatusText').textContent =
+    `Menampilkan ${cardsToDisplay.length} dari ${ownedIdSet.size} koleksi`;
   document.getElementById('emptyAlbumMsg').classList.toggle('hidden', cardsToDisplay.length > 0);
 
+  const fragment = document.createDocumentFragment();
   cardsToDisplay.forEach(card => {
     const item = document.createElement('div');
     item.className = 'album-card-item';
@@ -370,8 +469,9 @@ function renderAlbum() {
       <img src="${card.image_url}" loading="lazy" alt="${card.name}">
     `;
     item.addEventListener('click', () => openCardDetail(card));
-    grid.appendChild(item);
+    fragment.appendChild(item);
   });
+  grid.appendChild(fragment);
 }
 
 function setupSort() {
@@ -549,13 +649,15 @@ function renderSSRPoolPreview() {
   ssrGrid.innerHTML = '';
 
   const ssrCards = cardPool.filter(c => c.rarity === 'SSR').slice(0, 8);
+  const fragment = document.createDocumentFragment();
   ssrCards.forEach(c => {
     const thumb = document.createElement('div');
     thumb.className = 'ssr-pool-thumb';
     thumb.title = `${c.name} (${c.anime})`;
     thumb.innerHTML = `<img src="${c.image_url}" loading="lazy" alt="${c.name}">`;
-    ssrGrid.appendChild(thumb);
+    fragment.appendChild(thumb);
   });
+  ssrGrid.appendChild(fragment);
 }
 
 // ==========================================
@@ -586,20 +688,22 @@ document.getElementById('btnTradeShard').addEventListener('click', async () => {
 
 function updateStats() {
   const total = currentUser.total_pulls || 0;
-  const ownedIds = [...new Set(userInventory.map(i => i.card_id))];
+  const ownedIdSet = new Set();
   let countSSR = 0;
   let countSR = 0;
 
-  userInventory.forEach(inv => {
-    const card = cardPool.find(c => c.id === inv.card_id);
+  for (let i = 0; i < userInventory.length; i++) {
+    const inv = userInventory[i];
+    ownedIdSet.add(inv.card_id);
+    const card = cardMap.get(inv.card_id);
     if (card) {
       if (card.rarity === 'SSR') countSSR++;
-      if (card.rarity === 'SR') countSR++;
+      else if (card.rarity === 'SR') countSR++;
     }
-  });
+  }
 
   document.getElementById('statTotalPulls').textContent = total;
-  document.getElementById('statUniqueCards').textContent = ownedIds.length;
+  document.getElementById('statUniqueCards').textContent = ownedIdSet.size;
   document.getElementById('statRateSSR').textContent = total > 0 ? `${((countSSR / total) * 100).toFixed(1)}%` : '0%';
   document.getElementById('statRateSR').textContent = total > 0 ? `${((countSR / total) * 100).toFixed(1)}%` : '0%';
 }

@@ -1,9 +1,10 @@
-const CACHE_NAME = 'animegacha-v3';
+const CACHE_NAME = 'animegacha-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
+  '/config.js',
   '/manifest.json',
   '/icon.png'
 ];
