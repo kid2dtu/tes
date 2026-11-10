@@ -257,11 +257,31 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Load pool kartu secara instan via cache lalu background update
   loadCardPool();
 
-  // Cek Status Sesi Login
+  // Cek Status Sesi Login dengan Instant Cache Resume (0 ms)
   const savedUser = localStorage.getItem('gacha_user');
   const savedPin = localStorage.getItem('gacha_pin');
+  const userCacheKey = (typeof CONFIG !== 'undefined' && CONFIG.CACHE_KEYS.USER_DATA) || 'animegacha_user_data_cache';
 
   if (savedUser && savedPin) {
+    // 1. Langsung tutup modal login dan tampilkan data terakhir jika ada
+    document.getElementById('authModal').classList.add('hidden');
+    try {
+      const cachedUserData = localStorage.getItem(userCacheKey);
+      if (cachedUserData) {
+        const parsed = JSON.parse(cachedUserData);
+        if (parsed.user && parsed.user.username === savedUser) {
+          applyUserData(parsed.user, parsed.inventory || []);
+        }
+      } else {
+        // Fallback cepat: tampilkan username di navbar
+        document.getElementById('navUsername').textContent = savedUser;
+        document.getElementById('profileUsername').textContent = savedUser;
+      }
+    } catch (e) {
+      console.warn("Gagal membaca cache user data:", e);
+    }
+
+    // 2. Verifikasi dan sinkronisasi data terbaru di latar belakang
     loginUser(savedUser, savedPin);
   } else {
     document.getElementById('authModal').classList.remove('hidden');
@@ -291,6 +311,11 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
   if (res.status === 'success') {
     localStorage.setItem('gacha_user', username);
     localStorage.setItem('gacha_pin', pin);
+    const userCacheKey = (typeof CONFIG !== 'undefined' && CONFIG.CACHE_KEYS.USER_DATA) || 'animegacha_user_data_cache';
+    try {
+      localStorage.setItem(userCacheKey, JSON.stringify({ user: res.user, inventory: res.inventory }));
+    } catch (e) {}
+
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     errBox.textContent = '';
@@ -305,12 +330,19 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
 async function loginUser(username, pin) {
   const res = await callAPI({ action: 'login', username, pin });
   if (res.status === 'success') {
+    const userCacheKey = (typeof CONFIG !== 'undefined' && CONFIG.CACHE_KEYS.USER_DATA) || 'animegacha_user_data_cache';
+    try {
+      localStorage.setItem(userCacheKey, JSON.stringify({ user: res.user, inventory: res.inventory }));
+    } catch (e) {}
+
     applyUserData(res.user, res.inventory);
     document.getElementById('authModal').classList.add('hidden');
     scheduleMidnightResetNotification();
     setTimeout(checkPendingNotifications, 1500);
   } else {
+    // Jika PIN salah atau akun bermasalah di backend, baru bersihkan sesi dan buka modal
     localStorage.clear();
+    currentUser = null;
     document.getElementById('authModal').classList.remove('hidden');
   }
 }
@@ -319,6 +351,11 @@ function applyUserData(user, inventory) {
   currentUser = user;
   userInventory = inventory || [];
   rebuildInventoryIndexMap();
+
+  const userCacheKey = (typeof CONFIG !== 'undefined' && CONFIG.CACHE_KEYS.USER_DATA) || 'animegacha_user_data_cache';
+  try {
+    localStorage.setItem(userCacheKey, JSON.stringify({ user: currentUser, inventory: userInventory }));
+  } catch (e) {}
 
   document.getElementById('navUsername').textContent = user.username;
   document.getElementById('profileUsername').textContent = user.username;

@@ -4,6 +4,7 @@ const CONFIG = {
   POLLING_INTERVAL_MS: 45000,
   CACHE_KEYS: {
     CARD_POOL: "animegacha_card_pool_cache",
+    USER_DATA: "animegacha_user_data_cache",
     LAST_SEEN_ANNOUNCEMENT: "last_seen_announcement",
     USER: "gacha_user",
     PIN: "gacha_pin"
