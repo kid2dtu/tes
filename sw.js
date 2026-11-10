@@ -64,7 +64,52 @@ self.addEventListener('message', (e) => {
   }
 });
 
-// 5. Klik Notifikasi Membuka Web PWA
+// 5. Dukungan Push Event (Web Push API saat aplikasi ditutup)
+self.addEventListener('push', (e) => {
+  let data = { title: 'AnimeGacha', message: 'Ada update terbaru untukmu! 🎟️' };
+  try {
+    if (e.data) {
+      data = e.data.json();
+    }
+  } catch (err) {
+    if (e.data) {
+      data.message = e.data.text();
+    }
+  }
+
+  const title = data.title || 'AnimeGacha';
+  const options = {
+    body: data.message || data.body || 'Buka aplikasi untuk melihat update.',
+    icon: '/icon.png',
+    badge: '/icon.png',
+    vibrate: [200, 100, 200],
+    data: data.url || '/'
+  };
+
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// 6. Dukungan Periodic Background Sync (Eksperimental di Chromium jika didukung OS)
+self.addEventListener('periodicsync', (e) => {
+  if (e.tag === 'check-gacha-updates') {
+    e.waitUntil(
+      fetch('https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec?action=check_notifications')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.status === 'success' && data.announcement) {
+            return self.registration.showNotification(data.announcement.title, {
+              body: data.announcement.message,
+              icon: '/icon.png',
+              badge: '/icon.png'
+            });
+          }
+        })
+        .catch(() => {})
+    );
+  }
+});
+
+// 7. Klik Notifikasi Membuka Web PWA
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   e.waitUntil(
