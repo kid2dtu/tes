@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard Admin - AnimeGacha</title>
   <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
@@ -176,8 +178,11 @@
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
+    const API_URL = (typeof CONFIG !== 'undefined' && CONFIG.API_URL)
+      ? CONFIG.API_URL
+      : "https://script.google.com/macros/s/AKfycbz3LraveIpKMeajlIpnf5KcG4vGffBtdkY9LtFucyhwbTUVEWPKWLW8vDlwdVbmJ0REMg/exec";
     let activeAdminKey = "";
     let rawCards = [];
     let rawUsers = [];
@@ -238,28 +243,42 @@
       renderCards(rawCards);
     }
 
-    // Render Tabel User
+    // Render Tabel User dengan DocumentFragment
     function renderUsers(users) {
       document.getElementById('userCount').textContent = users.length;
       const tbody = document.querySelector('#usersTable tbody');
       tbody.innerHTML = '';
 
+      const fragment = document.createDocumentFragment();
       users.forEach(u => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><strong>${u[0]}</strong></td>
+          <td><strong>${escapeHtml(u[0])}</strong></td>
           <td>${u[2]} 🎟️</td>
           <td>${u[3]} ⭐</td>
           <td>${u[4]} / 30</td>
           <td>${u[5]}</td>
           <td>
-            <button class="btn-action btn-reset" onclick="openResetTicketModal('${u[0]}', ${u[2]})">
+            <button class="btn-action btn-reset" onclick="openResetTicketModal('${escapeJsStr(u[0])}', ${u[2]})">
               ✏️ Atur Tiket
             </button>
           </td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
       });
+      tbody.appendChild(fragment);
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      }[m]));
+    }
+
+    function escapeJsStr(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
     }
 
     // Aksi Reset/Ubah Tiket User + Kirim Notif
@@ -329,32 +348,47 @@
       }
     });
 
-    // Render Tabel Cards & Search
+    // Render Tabel Cards & Search dengan DocumentFragment
     function renderCards(cards) {
       document.getElementById('cardCount').textContent = cards.length;
       const tbody = document.querySelector('#cardsTable tbody');
       tbody.innerHTML = '';
 
+      const fragment = document.createDocumentFragment();
       cards.forEach(c => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><img src="${c[4]}" class="img-preview" alt="${c[1]}" loading="lazy"></td>
-          <td><strong>${c[1]}</strong></td>
-          <td>${c[2]}</td>
+          <td><img src="${c[4]}" class="img-preview" alt="${escapeHtml(c[1])}" loading="lazy"></td>
+          <td><strong>${escapeHtml(c[1])}</strong></td>
+          <td>${escapeHtml(c[2])}</td>
           <td><span class="badge badge-${c[3]}">${c[3]}</span></td>
-          <td><button class="btn-action btn-del" onclick="deleteCard('${c[0]}')">Hapus</button></td>
+          <td><button class="btn-action btn-del" onclick="deleteCard('${escapeJsStr(c[0])}')">Hapus</button></td>
         `;
-        tbody.appendChild(tr);
+        fragment.appendChild(tr);
       });
+      tbody.appendChild(fragment);
     }
 
-    document.getElementById('cardSearchInput').addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase();
+    // Debounce helper untuk pencarian mulus tanpa lag
+    function debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
+
+    const handleCardSearch = debounce((query) => {
+      const q = query.toLowerCase();
       const filtered = rawCards.filter(c => 
-        c[1].toString().toLowerCase().includes(q) || 
-        c[2].toString().toLowerCase().includes(q)
+        (c[1] && c[1].toString().toLowerCase().includes(q)) ||
+        (c[2] && c[2].toString().toLowerCase().includes(q))
       );
       renderCards(filtered);
+    }, 180);
+
+    document.getElementById('cardSearchInput').addEventListener('input', (e) => {
+      handleCardSearch(e.target.value);
     });
 
     // Tambah Kartu
